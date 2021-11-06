@@ -1,12 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://your-docusaurus-test-site.com/blog</id>
-    <title>My Site Blog</title>
-    <updated>2021-08-26T00:00:00.000Z</updated>
+    <title>Erhwen Kuo's Docs Blog</title>
+    <updated>2021-11-06T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://your-docusaurus-test-site.com/blog"/>
-    <subtitle>My Site Blog</subtitle>
+    <subtitle>Erhwen Kuo's Docs Blog</subtitle>
     <icon>https://your-docusaurus-test-site.com/img/favicon.ico</icon>
+    <entry>
+        <title type="html"><![CDATA[Welcome Docusaurus v2]]></title>
+        <id>welcome-docusaurus-v2</id>
+        <link href="https://your-docusaurus-test-site.com/blog/welcome-docusaurus-v2"/>
+        <updated>2021-11-06T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[This is my first post on Docusaurus 2.]]></summary>
+        <content type="html"><![CDATA[<p>Welcome to this blog. This blog is created with <a href="https://docusaurus.io/"><strong>Docusaurus 2</strong></a>.</p><p>This is my first post on Docusaurus 2.</p><p>A whole bunch of exploration to follow.</p>]]></content>
+        <author>
+            <name>Erhwen Kuo</name>
+            <uri>https://github.com/Erhwenkuo</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Welcome]]></title>
         <id>welcome</id>
