@@ -4,49 +4,16 @@
         <title>Erhwen Kuo's Docs Blog</title>
         <link>https://your-docusaurus-test-site.com/blog</link>
         <description>Erhwen Kuo's Docs Blog</description>
-        <lastBuildDate>Sat, 06 Nov 2021 00:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Sun, 07 Nov 2021 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <item>
-            <title><![CDATA[Welcome Docusaurus v2]]></title>
+            <title><![CDATA[靜態網站生成的好工具]]></title>
             <link>https://your-docusaurus-test-site.com/blog/welcome-docusaurus-v2</link>
             <guid>welcome-docusaurus-v2</guid>
-            <pubDate>Sat, 06 Nov 2021 00:00:00 GMT</pubDate>
-            <description><![CDATA[This is my first post on Docusaurus 2.]]></description>
-            <content:encoded><![CDATA[<p>Welcome to this blog. This blog is created with <a href="https://docusaurus.io/"><strong>Docusaurus 2</strong></a>.</p><p>This is my first post on Docusaurus 2.</p><p>A whole bunch of exploration to follow.</p>]]></content:encoded>
-        </item>
-        <item>
-            <title><![CDATA[Welcome]]></title>
-            <link>https://your-docusaurus-test-site.com/blog/welcome</link>
-            <guid>welcome</guid>
-            <pubDate>Thu, 26 Aug 2021 00:00:00 GMT</pubDate>
-            <description><![CDATA[Docusaurus blogging features are powered by the blog plugin.]]></description>
-            <content:encoded><![CDATA[<p><a href="https://docusaurus.io/docs/blog">Docusaurus blogging features</a> are powered by the <a href="https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-content-blog">blog plugin</a>.</p><p>Simply add Markdown files (or folders) to the <code>blog</code> directory.</p><p>Regular blog authors can be added to <code>authors.yml</code>.</p><p>The blog post date can be extracted from filenames, such as:</p><ul><li><code>2019-05-30-welcome.md</code></li><li><code>2019-05-30-welcome/index.md</code></li></ul><p>A blog post folder can be convenient to co-locate blog post images:</p><p><img src="./docusaurus-plushie-banner.jpeg" alt="Docusaurus Plushie"/></p><p>The blog supports tags as well!</p><p><strong>And if you don&#x27;t want a blog</strong>: just delete this directory, and use <code>blog: false</code> in your Docusaurus config.</p>]]></content:encoded>
-        </item>
-        <item>
-            <title><![CDATA[MDX Blog Post]]></title>
-            <link>https://your-docusaurus-test-site.com/blog/mdx-blog-post</link>
-            <guid>mdx-blog-post</guid>
-            <pubDate>Sun, 01 Aug 2021 00:00:00 GMT</pubDate>
-            <description><![CDATA[Blog posts support Docusaurus Markdown features, such as MDX.]]></description>
-            <content:encoded><![CDATA[<p>Blog posts support <a href="https://docusaurus.io/docs/markdown-features">Docusaurus Markdown features</a>, such as <a href="https://mdxjs.com/">MDX</a>.</p><p>:::tip</p><p>Use the power of React to create interactive blog posts.</p><pre><code class="language-js">&lt;button onClick={() =&gt; alert(&#x27;button clicked!&#x27;)}&gt;Click me!&lt;/button&gt;
-</code></pre><button>Click me!</button><p>:::</p>]]></content:encoded>
-        </item>
-        <item>
-            <title><![CDATA[Long Blog Post]]></title>
-            <link>https://your-docusaurus-test-site.com/blog/long-blog-post</link>
-            <guid>long-blog-post</guid>
-            <pubDate>Wed, 29 May 2019 00:00:00 GMT</pubDate>
-            <description><![CDATA[This is the summary of a very long blog post,]]></description>
-            <content:encoded><![CDATA[<p>This is the summary of a very long blog post,</p><p>Use a <code>&lt;!--</code> <code>truncate</code> <code>--&gt;</code> comment to limit blog post size in the list view.</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>]]></content:encoded>
-        </item>
-        <item>
-            <title><![CDATA[First Blog Post]]></title>
-            <link>https://your-docusaurus-test-site.com/blog/first-blog-post</link>
-            <guid>first-blog-post</guid>
-            <pubDate>Tue, 28 May 2019 00:00:00 GMT</pubDate>
-            <description><![CDATA[Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet]]></description>
-            <content:encoded><![CDATA[<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>]]></content:encoded>
+            <pubDate>Sun, 07 Nov 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[使用Docusaurus 2來構建靜態網站]]></description>
+            <content:encoded><![CDATA[<p><a href="https://docusaurus.io">Docusaurus</a>是一個產生靜態網站生成器(static-site generator，雖然官方的Github中不以這個關鍵字稱它)。它使用了 React 技術，提供快速簡易的建置、佈署與維護文件型的網站。</p><p><img src="./docusaurus-plushie-banner.jpeg" alt="Docusaurus Plushie"/></p><h3>什麼是靜態網站生成器</h3><p>它只是一種能將內容產生、佈署與維護靜態網頁(html)的工具，也就是說最終所有服務網站上的網頁都是 HTML 檔案。最近幾年這樣的工具並不少見, 以下列出大家討論比較多的幾種(按github的星星數來排序):</p><ul><li>Next.js - <a href="https://nextjs.org">https://nextjs.org/</a></li><li>Hugo - <a href="https://gohugo.io/">https://gohugo.io/</a></li><li>Gatsby - <a href="http://gatsbyjs.org">http://gatsbyjs.org</a></li><li>Jekyll - <a href="https://jekyllrb.com">https://jekyllrb.com</a></li><li>Nuxt - <a href="https://nuxtjs.org">https://nuxtjs.org/</a></li><li>Hexo - <a href="https://hexo.io">https://hexo.io/</a></li><li>Slate - <a href="https://slatedocs.github.io/slate">https://slatedocs.github.io/slate/</a></li><li>Docusaurus - <a href="https://v2.docusaurus.io">https://v2.docusaurus.io</a></li></ul><p>經過一番執骰子看點數後，花了一些時間在Hubo與Docusaurus中左右為難。最後就選了有可愛icon的Docusaurus。</p><h3>為什麼要使用靜態網站生成器來建置網站</h3><p>因為不需要去處理資料庫的設計，同時也不需要去寫網站伺服器端的後台執行程式(php, .net, node.js...)，再加上網站伺服器會作對靜態網頁作快取，頻寬使用上也會減少很多。</p><p>值得一提得是，目前靜態網站伺服器有很多免費的公有雲的服務可以用來佈署，也可以自訂自己的網址和有免費的SSL功能，省去了自架主機的工夫，所以也很省時省錢。</p><p>在企業內部使用了蠻方便的，透過一些CI/CD的pipeline整合與自動力，知識發佈與分享上便捷很多很多。</p><h3>參考</h3><ul><li>Eddy 思考與學習 - <a href="https://eddychang.me/docusaurus-v2-intro">Docusaurus 2 介紹與使用</a></li><li>Docusaurus官網  - <a href="https://docusaurus.io/docs">Docusaurus Introduciton</a></li></ul>]]></content:encoded>
         </item>
     </channel>
 </rss>
