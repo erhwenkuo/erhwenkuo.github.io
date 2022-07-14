@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkwebsite=self.webpackChunkwebsite||[]).push([[535],{5641:function(e){e.exports=JSON.parse('{"title":"Recent posts","items":[{"title":"\u975c\u614b\u7db2\u7ad9\u751f\u6210\u7684\u597d\u5de5\u5177","permalink":"/blog/welcome-docusaurus-v2"}]}')}}]);
