@@ -72,86 +72,54 @@
 <a id=__codelineno-11-5 name=__codelineno-11-5 href=#__codelineno-11-5></a><span class=p>)</span>
 <a id=__codelineno-11-6 name=__codelineno-11-6 href=#__codelineno-11-6></a>
 <a id=__codelineno-11-7 name=__codelineno-11-7 href=#__codelineno-11-7></a><span class=n>auth_client</span><span class=o>.</span><span class=n>create_user</span><span class=p>(</span><span class=n>username</span><span class=o>=</span><span class=s2>"username"</span><span class=p>,</span> <span class=n>password</span><span class=o>=</span><span class=s2>"password"</span><span class=p>)</span>
-</code></pre></div> <h2 id=_9>如何配置<a class=headerlink href=#_9 title="Permanent link">¶</a></h2> <p>MLflow 身份驗證模組的配置檔案位於 <a href=https://github.com/mlflow/mlflow/blob/master/mlflow/server/auth/basic_auth.ini>mlflow/server/auth/basic_auth.ini</a>：</p> <p>```ini "basic_auth.ini" [mlflow] default_permission = READ database_uri = sqlite:///basic_auth.db admin_username = admin admin_password = password authorization_function = mlflow.server.auth:authenticate_request_basic_auth </p><div class=highlight><pre><span></span><code><a id=__codelineno-12-1 name=__codelineno-12-1 href=#__codelineno-12-1></a>| Variable | Description |
-<a id=__codelineno-12-2 name=__codelineno-12-2 href=#__codelineno-12-2></a>|----------|-------------|
-<a id=__codelineno-12-3 name=__codelineno-12-3 href=#__codelineno-12-3></a>|`default_permission`|所有資源的預設權限, 從 MLflow 源始設定檔可得知預設權限的設定是 **READ**, 對於多團隊共同使用同一個 Tracking Service 的情境, 建議設定為 **NO_PERMISSIONS**。|
-<a id=__codelineno-12-4 name=__codelineno-12-4 href=#__codelineno-12-4></a>|`database_uri`|儲存權限和使用者資料的資料庫位置, 參考:[SqlAlchemy - Database URLs](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls)|
-<a id=__codelineno-12-5 name=__codelineno-12-5 href=#__codelineno-12-5></a>|`admin_username`|預設管理員使用者名稱|
-<a id=__codelineno-12-6 name=__codelineno-12-6 href=#__codelineno-12-6></a>|`admin_password`|預設管理員使用者密碼|
-<a id=__codelineno-12-7 name=__codelineno-12-7 href=#__codelineno-12-7></a>|`authorization_function`|驗證請求的配置函數|
-<a id=__codelineno-12-8 name=__codelineno-12-8 href=#__codelineno-12-8></a>
-<a id=__codelineno-12-9 name=__codelineno-12-9 href=#__codelineno-12-9></a>!!! tip
-<a id=__codelineno-12-10 name=__codelineno-12-10 href=#__codelineno-12-10></a>    **PostgreSQL**
-<a id=__codelineno-12-11 name=__codelineno-12-11 href=#__codelineno-12-11></a>    PostgreSQL dialect 使用 `psycopg2` 作為預設 DBAPI。建議先進行下列套件的安裝:
-<a id=__codelineno-12-12 name=__codelineno-12-12 href=#__codelineno-12-12></a>
-<a id=__codelineno-12-13 name=__codelineno-12-13 href=#__codelineno-12-13></a>    ```bash
-<a id=__codelineno-12-14 name=__codelineno-12-14 href=#__codelineno-12-14></a>    pip install psycopg2-binary
-<a id=__codelineno-12-15 name=__codelineno-12-15 href=#__codelineno-12-15></a>    ```
-<a id=__codelineno-12-16 name=__codelineno-12-16 href=#__codelineno-12-16></a>
-<a id=__codelineno-12-17 name=__codelineno-12-17 href=#__codelineno-12-17></a>    連接字串範例: 
-<a id=__codelineno-12-18 name=__codelineno-12-18 href=#__codelineno-12-18></a>
-<a id=__codelineno-12-19 name=__codelineno-12-19 href=#__codelineno-12-19></a>    ```bash
-<a id=__codelineno-12-20 name=__codelineno-12-20 href=#__codelineno-12-20></a>    # default
-<a id=__codelineno-12-21 name=__codelineno-12-21 href=#__codelineno-12-21></a>    engine = create_engine("postgresql://scott:tiger@localhost/mydatabase")
-<a id=__codelineno-12-22 name=__codelineno-12-22 href=#__codelineno-12-22></a>
-<a id=__codelineno-12-23 name=__codelineno-12-23 href=#__codelineno-12-23></a>    # psycopg2
-<a id=__codelineno-12-24 name=__codelineno-12-24 href=#__codelineno-12-24></a>    engine = create_engine("postgresql+psycopg2://scott:tiger@localhost/mydatabase")
-<a id=__codelineno-12-25 name=__codelineno-12-25 href=#__codelineno-12-25></a>    ```
-<a id=__codelineno-12-26 name=__codelineno-12-26 href=#__codelineno-12-26></a>
-<a id=__codelineno-12-27 name=__codelineno-12-27 href=#__codelineno-12-27></a>    有關連接到 PostgreSQL 的更多說明，請參閱 [PostgreSQL](https://docs.sqlalchemy.org/en/20/dialects/postgresql.html)。
-<a id=__codelineno-12-28 name=__codelineno-12-28 href=#__codelineno-12-28></a>
-<a id=__codelineno-12-29 name=__codelineno-12-29 href=#__codelineno-12-29></a>    **MySQL**
-<a id=__codelineno-12-30 name=__codelineno-12-30 href=#__codelineno-12-30></a>    MySQL dialect 使用 `mysqlclient` 作為預設 DBAPI。建議先進行下列套件的安裝:
-<a id=__codelineno-12-31 name=__codelineno-12-31 href=#__codelineno-12-31></a>
-<a id=__codelineno-12-32 name=__codelineno-12-32 href=#__codelineno-12-32></a>    ```bash
-<a id=__codelineno-12-33 name=__codelineno-12-33 href=#__codelineno-12-33></a>    pip install mysqlclient
-<a id=__codelineno-12-34 name=__codelineno-12-34 href=#__codelineno-12-34></a>    ```
-<a id=__codelineno-12-35 name=__codelineno-12-35 href=#__codelineno-12-35></a>
-<a id=__codelineno-12-36 name=__codelineno-12-36 href=#__codelineno-12-36></a>    連接字串範例: 
-<a id=__codelineno-12-37 name=__codelineno-12-37 href=#__codelineno-12-37></a>
-<a id=__codelineno-12-38 name=__codelineno-12-38 href=#__codelineno-12-38></a>    ```
-<a id=__codelineno-12-39 name=__codelineno-12-39 href=#__codelineno-12-39></a>    # default
-<a id=__codelineno-12-40 name=__codelineno-12-40 href=#__codelineno-12-40></a>    engine = create_engine("mysql://scott:tiger@localhost/foo")
-<a id=__codelineno-12-41 name=__codelineno-12-41 href=#__codelineno-12-41></a>
-<a id=__codelineno-12-42 name=__codelineno-12-42 href=#__codelineno-12-42></a>    # mysqlclient (a maintained fork of MySQL-Python)
-<a id=__codelineno-12-43 name=__codelineno-12-43 href=#__codelineno-12-43></a>    engine = create_engine("mysql+mysqldb://scott:tiger@localhost/foo")
-<a id=__codelineno-12-44 name=__codelineno-12-44 href=#__codelineno-12-44></a>    ```
-<a id=__codelineno-12-45 name=__codelineno-12-45 href=#__codelineno-12-45></a>
-<a id=__codelineno-12-46 name=__codelineno-12-46 href=#__codelineno-12-46></a>或者，指派環境變數 **MLFLOW_AUTH_CONFIG_PATH** 以指向您的自訂設定檔。
-<a id=__codelineno-12-47 name=__codelineno-12-47 href=#__codelineno-12-47></a>
-<a id=__codelineno-12-48 name=__codelineno-12-48 href=#__codelineno-12-48></a>如果您想要使用 HTTP basic auth 之外的其他的身份驗證方法，則 `authorization_function` 設定支援可插入客制化的身份驗證方法。該值的設定結構是 `module_name:function_name`。此函數具有以下 input/oput 參數與回傳結果：
-<a id=__codelineno-12-49 name=__codelineno-12-49 href=#__codelineno-12-49></a>
-<a id=__codelineno-12-50 name=__codelineno-12-50 href=#__codelineno-12-50></a>```python
-<a id=__codelineno-12-51 name=__codelineno-12-51 href=#__codelineno-12-51></a>def authenticate_request() -&gt; Union[Authorization, Response]:
-<a id=__codelineno-12-52 name=__codelineno-12-52 href=#__codelineno-12-52></a>    ...
-</code></pre></div> <p>如果請求經過驗證，函數應傳回 <code>werkzeug.datastructs.Authorization</code> 物件；如果請求未經過驗證，則該函數應傳回 Response 物件（通常為 <code>401：未經授權</code>）。有關如何實作自訂驗證方法的範例，請參閱 <a href=https://github.com/mlflow/mlflow/blob/master/tests/server/auth/test_auth.py>tests/server/auth/jwt_auth.py</a>。注意：此範例不適用於生產用途。</p> <h2 id=_10>連接到資料庫<a class=headerlink href=#_10 title="Permanent link">¶</a></h2> <p>預設情況下，MLflow 身份認證模組使用本機 SQLite 資料庫來儲存使用者和權限資料。在多節點部署的情況下，建議使用集中式資料庫來儲存這些資料。</p> <p>若要連接到集中式資料庫，您可以將 <code>database_uri</code> 配置變數設定為資料庫 URL。</p> <p><strong>Example: <code>/path/to/my_auth_config.ini</code></strong></p> <div class=highlight><pre><span></span><code><a id=__codelineno-13-1 name=__codelineno-13-1 href=#__codelineno-13-1></a><span class=k>[mlflow]</span>
-<a id=__codelineno-13-2 name=__codelineno-13-2 href=#__codelineno-13-2></a><span class=na>database_uri</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s>postgresql://username:password@hostname:port/database</span>
-</code></pre></div> <p>然後，啟動 MLflow Tracking Service，<mark class=critic>並將 <code>MLFLOW_AUTH_CONFIG_PATH</code> 環境變數設定為設定檔的路徑</mark>。</p> <div class=highlight><pre><span></span><code><a id=__codelineno-14-1 name=__codelineno-14-1 href=#__codelineno-14-1></a><span class=nb>export</span><span class=w> </span><span class=nv>MLFLOW_AUTH_CONFIG_PATH</span><span class=o>=</span>/path/to/my_auth_config.ini
-<a id=__codelineno-14-2 name=__codelineno-14-2 href=#__codelineno-14-2></a>
-<a id=__codelineno-14-3 name=__codelineno-14-3 href=#__codelineno-14-3></a>mlflow<span class=w> </span>server<span class=w> </span>--app-name<span class=w> </span>basic-auth
-</code></pre></div> <p>必須在啟動 MLflow Tracking Service 之前先建立好資料庫。資料庫 schema 則會在 Tracking Service 啟動時自動建立。</p> <h2 id=_11>客制化身份認證<a class=headerlink href=#_11 title="Permanent link">¶</a></h2> <p>MLflow 身份驗證設計為可擴充的。如果您的組織需要更進階的身份驗證邏輯（例如基於 token 的身份驗證），可以安裝第三方外掛程式或建立您自己的外掛程式。</p> <p>您的插件應該是可安裝的 Python 套件。它應該包括一個擴展 MLflow 應用程式的應用程式工廠，並且可以選擇實現一個客戶端來管理權限。應用程式工廠函數名稱將傳遞給 Flask CLI 中的 <code>--app</code> 參數。請參閱 <a href=https://flask.palletsprojects.com/en/latest/cli/#application-discovery>Flask application-discovery</a> 以了解更多資訊。</p> <p><strong>Example: my_auth/<strong>init</strong>.py</strong></p> <div class=highlight><pre><span></span><code><a id=__codelineno-15-1 name=__codelineno-15-1 href=#__codelineno-15-1></a><span class=kn>from</span> <span class=nn>flask</span> <span class=kn>import</span> <span class=n>Flask</span>
-<a id=__codelineno-15-2 name=__codelineno-15-2 href=#__codelineno-15-2></a><span class=kn>from</span> <span class=nn>mlflow.server</span> <span class=kn>import</span> <span class=n>app</span>
-<a id=__codelineno-15-3 name=__codelineno-15-3 href=#__codelineno-15-3></a>
-<a id=__codelineno-15-4 name=__codelineno-15-4 href=#__codelineno-15-4></a>
-<a id=__codelineno-15-5 name=__codelineno-15-5 href=#__codelineno-15-5></a><span class=k>def</span> <span class=nf>create_app</span><span class=p>(</span><span class=n>app</span><span class=p>:</span> <span class=n>Flask</span> <span class=o>=</span> <span class=n>app</span><span class=p>):</span>
-<a id=__codelineno-15-6 name=__codelineno-15-6 href=#__codelineno-15-6></a>    <span class=n>app</span><span class=o>.</span><span class=n>add_url_rule</span><span class=p>(</span><span class=o>...</span><span class=p>)</span>
-<a id=__codelineno-15-7 name=__codelineno-15-7 href=#__codelineno-15-7></a>    <span class=k>return</span> <span class=n>app</span>
-<a id=__codelineno-15-8 name=__codelineno-15-8 href=#__codelineno-15-8></a>
-<a id=__codelineno-15-9 name=__codelineno-15-9 href=#__codelineno-15-9></a>
-<a id=__codelineno-15-10 name=__codelineno-15-10 href=#__codelineno-15-10></a><span class=k>class</span> <span class=nc>MyAuthClient</span><span class=p>:</span>
-<a id=__codelineno-15-11 name=__codelineno-15-11 href=#__codelineno-15-11></a>    <span class=o>...</span>
-</code></pre></div> <p>然後，該插件應該安裝在您的 Python 環境中：</p> <div class=highlight><pre><span></span><code><a id=__codelineno-16-1 name=__codelineno-16-1 href=#__codelineno-16-1></a>pip<span class=w> </span>install<span class=w> </span>my_auth
-</code></pre></div> <p>然後，在 <code>mlflow/setup.py</code> 中註冊您的外掛程式：</p> <div class=highlight><pre><span></span><code><a id=__codelineno-17-1 name=__codelineno-17-1 href=#__codelineno-17-1></a><span class=n>setup</span><span class=p>(</span>
-<a id=__codelineno-17-2 name=__codelineno-17-2 href=#__codelineno-17-2></a>    <span class=o>...</span><span class=p>,</span>
-<a id=__codelineno-17-3 name=__codelineno-17-3 href=#__codelineno-17-3></a>    <span class=n>entry_points</span><span class=o>=</span><span class=s2>"""</span>
-<a id=__codelineno-17-4 name=__codelineno-17-4 href=#__codelineno-17-4></a><span class=s2>        ...</span>
-<a id=__codelineno-17-5 name=__codelineno-17-5 href=#__codelineno-17-5></a>
-<a id=__codelineno-17-6 name=__codelineno-17-6 href=#__codelineno-17-6></a><span class=s2>        [mlflow.app]</span>
-<a id=__codelineno-17-7 name=__codelineno-17-7 href=#__codelineno-17-7></a><span class=s2>        my-auth=my_auth:create_app</span>
-<a id=__codelineno-17-8 name=__codelineno-17-8 href=#__codelineno-17-8></a>
-<a id=__codelineno-17-9 name=__codelineno-17-9 href=#__codelineno-17-9></a><span class=s2>        [mlflow.app.client]</span>
-<a id=__codelineno-17-10 name=__codelineno-17-10 href=#__codelineno-17-10></a><span class=s2>        my-auth=my_auth:MyAuthClient</span>
-<a id=__codelineno-17-11 name=__codelineno-17-11 href=#__codelineno-17-11></a><span class=s2>    """</span><span class=p>,</span>
-<a id=__codelineno-17-12 name=__codelineno-17-12 href=#__codelineno-17-12></a><span class=p>)</span>
-</code></pre></div> <p>然後，您可以啟動 MLflow 伺服器：</p> <div class=highlight><pre><span></span><code><a id=__codelineno-18-1 name=__codelineno-18-1 href=#__codelineno-18-1></a>mlflow server --app-name my-auth
+</code></pre></div> <h2 id=_9>如何配置<a class=headerlink href=#_9 title="Permanent link">¶</a></h2> <p>MLflow 身份驗證模組的配置檔案位於 <a href=https://github.com/mlflow/mlflow/blob/master/mlflow/server/auth/basic_auth.ini>mlflow/server/auth/basic_auth.ini</a>：</p> <div class=highlight><span class=filename>basic_auth.ini</span><pre><span></span><code><a id=__codelineno-12-1 name=__codelineno-12-1 href=#__codelineno-12-1></a><span class=k>[mlflow]</span>
+<a id=__codelineno-12-2 name=__codelineno-12-2 href=#__codelineno-12-2></a><span class=na>default_permission</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s>READ</span>
+<a id=__codelineno-12-3 name=__codelineno-12-3 href=#__codelineno-12-3></a><span class=na>database_uri</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s>sqlite:///basic_auth.db</span>
+<a id=__codelineno-12-4 name=__codelineno-12-4 href=#__codelineno-12-4></a><span class=na>admin_username</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s>admin</span>
+<a id=__codelineno-12-5 name=__codelineno-12-5 href=#__codelineno-12-5></a><span class=na>admin_password</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s>password</span>
+<a id=__codelineno-12-6 name=__codelineno-12-6 href=#__codelineno-12-6></a><span class=na>authorization_function</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s>mlflow.server.auth:authenticate_request_basic_auth</span>
+</code></pre></div> <table> <thead> <tr> <th>Variable</th> <th>Description</th> </tr> </thead> <tbody> <tr> <td><code>default_permission</code></td> <td>所有資源的預設權限, 從 MLflow 源始設定檔可得知預設權限的設定是 <strong>READ</strong>。<br>對於多團隊共同使用同一個 Tracking Service 的情境, 建議設定為 <strong>NO_PERMISSIONS</strong>。</td> </tr> <tr> <td><code>database_uri</code></td> <td>儲存權限和使用者資料的資料庫位置, 參考: <a href=https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls>SqlAlchemy - Database URLs</a></td> </tr> <tr> <td><code>admin_username</code></td> <td>預設管理員使用者名稱</td> </tr> <tr> <td><code>admin_password</code></td> <td>預設管理員使用者密碼</td> </tr> <tr> <td><code>authorization_function</code></td> <td>驗證請求的配置函數</td> </tr> </tbody> </table> <div class="admonition tip"> <p class=admonition-title>Tip</p> <p><strong>PostgreSQL</strong> PostgreSQL dialect 使用 <code>psycopg2</code> 作為預設 DBAPI。建議先進行下列套件的安裝:</p> <div class=highlight><pre><span></span><code><a id=__codelineno-13-1 name=__codelineno-13-1 href=#__codelineno-13-1></a>pip<span class=w> </span>install<span class=w> </span>psycopg2-binary
+</code></pre></div> <p>連接字串範例: </p> <div class=highlight><pre><span></span><code><a id=__codelineno-14-1 name=__codelineno-14-1 href=#__codelineno-14-1></a><span class=c1># default</span>
+<a id=__codelineno-14-2 name=__codelineno-14-2 href=#__codelineno-14-2></a><span class=nv>engine</span><span class=w> </span><span class=o>=</span><span class=w> </span>create_engine<span class=o>(</span><span class=s2>"postgresql://scott:tiger@localhost/mydatabase"</span><span class=o>)</span>
+<a id=__codelineno-14-3 name=__codelineno-14-3 href=#__codelineno-14-3></a>
+<a id=__codelineno-14-4 name=__codelineno-14-4 href=#__codelineno-14-4></a><span class=c1># psycopg2</span>
+<a id=__codelineno-14-5 name=__codelineno-14-5 href=#__codelineno-14-5></a><span class=nv>engine</span><span class=w> </span><span class=o>=</span><span class=w> </span>create_engine<span class=o>(</span><span class=s2>"postgresql+psycopg2://scott:tiger@localhost/mydatabase"</span><span class=o>)</span>
+</code></pre></div> <p>有關連接到 PostgreSQL 的更多說明，請參閱 <a href=https://docs.sqlalchemy.org/en/20/dialects/postgresql.html>PostgreSQL</a>。</p> <p><strong>MySQL</strong> MySQL dialect 使用 <code>mysqlclient</code> 作為預設 DBAPI。建議先進行下列套件的安裝:</p> <div class=highlight><pre><span></span><code><a id=__codelineno-15-1 name=__codelineno-15-1 href=#__codelineno-15-1></a>pip<span class=w> </span>install<span class=w> </span>mysqlclient
+</code></pre></div> <p>連接字串範例: </p> <div class=highlight><pre><span></span><code><a id=__codelineno-16-1 name=__codelineno-16-1 href=#__codelineno-16-1></a># default
+<a id=__codelineno-16-2 name=__codelineno-16-2 href=#__codelineno-16-2></a>engine = create_engine("mysql://scott:tiger@localhost/foo")
+<a id=__codelineno-16-3 name=__codelineno-16-3 href=#__codelineno-16-3></a>
+<a id=__codelineno-16-4 name=__codelineno-16-4 href=#__codelineno-16-4></a># mysqlclient (a maintained fork of MySQL-Python)
+<a id=__codelineno-16-5 name=__codelineno-16-5 href=#__codelineno-16-5></a>engine = create_engine("mysql+mysqldb://scott:tiger@localhost/foo")
+</code></pre></div> </div> <p>或者，指派環境變數 <strong>MLFLOW_AUTH_CONFIG_PATH</strong> 以指向您的自訂設定檔。</p> <p>如果您想要使用 HTTP basic auth 之外的其他的身份驗證方法，則 <code>authorization_function</code> 設定支援可插入客制化的身份驗證方法。該值的設定結構是 <code>module_name:function_name</code>。此函數具有以下 input/oput 參數與回傳結果：</p> <div class=highlight><pre><span></span><code><a id=__codelineno-17-1 name=__codelineno-17-1 href=#__codelineno-17-1></a><span class=k>def</span> <span class=nf>authenticate_request</span><span class=p>()</span> <span class=o>-&gt;</span> <span class=n>Union</span><span class=p>[</span><span class=n>Authorization</span><span class=p>,</span> <span class=n>Response</span><span class=p>]:</span>
+<a id=__codelineno-17-2 name=__codelineno-17-2 href=#__codelineno-17-2></a>    <span class=o>...</span>
+</code></pre></div> <p>如果請求經過驗證，函數應傳回 <code>werkzeug.datastructs.Authorization</code> 物件；如果請求未經過驗證，則該函數應傳回 Response 物件（通常為 <code>401：未經授權</code>）。有關如何實作自訂驗證方法的範例，請參閱 <a href=https://github.com/mlflow/mlflow/blob/master/tests/server/auth/test_auth.py>tests/server/auth/jwt_auth.py</a>。注意：此範例不適用於生產用途。</p> <h2 id=_10>連接到資料庫<a class=headerlink href=#_10 title="Permanent link">¶</a></h2> <p>預設情況下，MLflow 身份認證模組使用本機 SQLite 資料庫來儲存使用者和權限資料。在多節點部署的情況下，建議使用集中式資料庫來儲存這些資料。</p> <p>若要連接到集中式資料庫，您可以將 <code>database_uri</code> 配置變數設定為資料庫 URL。</p> <p><strong>Example: <code>/path/to/my_auth_config.ini</code></strong></p> <div class=highlight><pre><span></span><code><a id=__codelineno-18-1 name=__codelineno-18-1 href=#__codelineno-18-1></a>[mlflow]
+<a id=__codelineno-18-2 name=__codelineno-18-2 href=#__codelineno-18-2></a>database_uri = postgresql://username:password@hostname:port/database
+</code></pre></div> <p>然後，啟動 MLflow Tracking Service，<mark class=critic>並將 <code>MLFLOW_AUTH_CONFIG_PATH</code> 環境變數設定為設定檔的路徑</mark>。</p> <div class=highlight><pre><span></span><code><a id=__codelineno-19-1 name=__codelineno-19-1 href=#__codelineno-19-1></a><span class=nb>export</span><span class=w> </span><span class=nv>MLFLOW_AUTH_CONFIG_PATH</span><span class=o>=</span>/path/to/my_auth_config.ini
+<a id=__codelineno-19-2 name=__codelineno-19-2 href=#__codelineno-19-2></a>
+<a id=__codelineno-19-3 name=__codelineno-19-3 href=#__codelineno-19-3></a>mlflow<span class=w> </span>server<span class=w> </span>--app-name<span class=w> </span>basic-auth
+</code></pre></div> <p>必須在啟動 MLflow Tracking Service 之前先建立好資料庫。資料庫 schema 則會在 Tracking Service 啟動時自動建立。</p> <h2 id=_11>客制化身份認證<a class=headerlink href=#_11 title="Permanent link">¶</a></h2> <p>MLflow 身份驗證設計為可擴充的。如果您的組織需要更進階的身份驗證邏輯（例如基於 token 的身份驗證），可以安裝第三方外掛程式或建立您自己的外掛程式。</p> <p>您的插件應該是可安裝的 Python 套件。它應該包括一個擴展 MLflow 應用程式的應用程式工廠，並且可以選擇實現一個客戶端來管理權限。應用程式工廠函數名稱將傳遞給 Flask CLI 中的 <code>--app</code> 參數。請參閱 <a href=https://flask.palletsprojects.com/en/latest/cli/#application-discovery>Flask application-discovery</a> 以了解更多資訊。</p> <p><strong>Example: my_auth/<strong>init</strong>.py</strong></p> <div class=highlight><pre><span></span><code><a id=__codelineno-20-1 name=__codelineno-20-1 href=#__codelineno-20-1></a><span class=kn>from</span> <span class=nn>flask</span> <span class=kn>import</span> <span class=n>Flask</span>
+<a id=__codelineno-20-2 name=__codelineno-20-2 href=#__codelineno-20-2></a><span class=kn>from</span> <span class=nn>mlflow.server</span> <span class=kn>import</span> <span class=n>app</span>
+<a id=__codelineno-20-3 name=__codelineno-20-3 href=#__codelineno-20-3></a>
+<a id=__codelineno-20-4 name=__codelineno-20-4 href=#__codelineno-20-4></a>
+<a id=__codelineno-20-5 name=__codelineno-20-5 href=#__codelineno-20-5></a><span class=k>def</span> <span class=nf>create_app</span><span class=p>(</span><span class=n>app</span><span class=p>:</span> <span class=n>Flask</span> <span class=o>=</span> <span class=n>app</span><span class=p>):</span>
+<a id=__codelineno-20-6 name=__codelineno-20-6 href=#__codelineno-20-6></a>    <span class=n>app</span><span class=o>.</span><span class=n>add_url_rule</span><span class=p>(</span><span class=o>...</span><span class=p>)</span>
+<a id=__codelineno-20-7 name=__codelineno-20-7 href=#__codelineno-20-7></a>    <span class=k>return</span> <span class=n>app</span>
+<a id=__codelineno-20-8 name=__codelineno-20-8 href=#__codelineno-20-8></a>
+<a id=__codelineno-20-9 name=__codelineno-20-9 href=#__codelineno-20-9></a>
+<a id=__codelineno-20-10 name=__codelineno-20-10 href=#__codelineno-20-10></a><span class=k>class</span> <span class=nc>MyAuthClient</span><span class=p>:</span>
+<a id=__codelineno-20-11 name=__codelineno-20-11 href=#__codelineno-20-11></a>    <span class=o>...</span>
+</code></pre></div> <p>然後，該插件應該安裝在您的 Python 環境中：</p> <div class=highlight><pre><span></span><code><a id=__codelineno-21-1 name=__codelineno-21-1 href=#__codelineno-21-1></a>pip<span class=w> </span>install<span class=w> </span>my_auth
+</code></pre></div> <p>然後，在 <code>mlflow/setup.py</code> 中註冊您的外掛程式：</p> <div class=highlight><pre><span></span><code><a id=__codelineno-22-1 name=__codelineno-22-1 href=#__codelineno-22-1></a><span class=n>setup</span><span class=p>(</span>
+<a id=__codelineno-22-2 name=__codelineno-22-2 href=#__codelineno-22-2></a>    <span class=o>...</span><span class=p>,</span>
+<a id=__codelineno-22-3 name=__codelineno-22-3 href=#__codelineno-22-3></a>    <span class=n>entry_points</span><span class=o>=</span><span class=s2>"""</span>
+<a id=__codelineno-22-4 name=__codelineno-22-4 href=#__codelineno-22-4></a><span class=s2>        ...</span>
+<a id=__codelineno-22-5 name=__codelineno-22-5 href=#__codelineno-22-5></a>
+<a id=__codelineno-22-6 name=__codelineno-22-6 href=#__codelineno-22-6></a><span class=s2>        [mlflow.app]</span>
+<a id=__codelineno-22-7 name=__codelineno-22-7 href=#__codelineno-22-7></a><span class=s2>        my-auth=my_auth:create_app</span>
+<a id=__codelineno-22-8 name=__codelineno-22-8 href=#__codelineno-22-8></a>
+<a id=__codelineno-22-9 name=__codelineno-22-9 href=#__codelineno-22-9></a><span class=s2>        [mlflow.app.client]</span>
+<a id=__codelineno-22-10 name=__codelineno-22-10 href=#__codelineno-22-10></a><span class=s2>        my-auth=my_auth:MyAuthClient</span>
+<a id=__codelineno-22-11 name=__codelineno-22-11 href=#__codelineno-22-11></a><span class=s2>    """</span><span class=p>,</span>
+<a id=__codelineno-22-12 name=__codelineno-22-12 href=#__codelineno-22-12></a><span class=p>)</span>
+</code></pre></div> <p>然後，您可以啟動 MLflow 伺服器：</p> <div class=highlight><pre><span></span><code><a id=__codelineno-23-1 name=__codelineno-23-1 href=#__codelineno-23-1></a>mlflow server --app-name my-auth
 </code></pre></div></div> </article> </div> </div> <button type=button class="md-top md-icon" data-md-component=top hidden> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg> Back to top </button> </main> <footer class=md-footer> <div class="md-footer-meta md-typeset"> <div class="md-footer-meta__inner md-grid"> <div class=md-copyright> Made with <a href=https://squidfunk.github.io/mkdocs-material/ target=_blank rel=noopener> Material for MkDocs </a> </div> </div> </div> </footer> </div> <div class=md-dialog data-md-component=dialog> <div class="md-dialog__inner md-typeset"></div> </div> <script id=__config type=application/json>{"base": "../..", "features": ["content.code.annotate", "content.tooltips", "navigation.indexes", "navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "search.highlight", "search.share", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.a264c092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script> <script src=../../assets/javascripts/bundle.726fbb30.min.js></script> <script src=../../javascripts/katex.js></script> <script src=https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.js></script> <script src=https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/contrib/auto-render.min.js></script> <script>document$.subscribe(() => {const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});})</script></body> </html>
