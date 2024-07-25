@@ -184,125 +184,209 @@
 <a id=__codelineno-7-21 name=__codelineno-7-21 href=#__codelineno-7-21></a>    <span class=s2>"http://localhost:8080/v2/models/content-type-example/infer"</span><span class=p>,</span>
 <a id=__codelineno-7-22 name=__codelineno-7-22 href=#__codelineno-7-22></a>    <span class=n>json</span><span class=o>=</span><span class=n>payload</span>
 <a id=__codelineno-7-23 name=__codelineno-7-23 href=#__codelineno-7-23></a><span class=p>)</span>
-</code></pre></div> <p>正如您應該能夠在伺服器日誌中看到的那樣，MLServer 將根據模型元資料交叉引用輸入名稱以找到正確的內容類型。</p> <h3 id=codecs_1>客制 Codecs<a class=headerlink href=#codecs_1 title="Permanent link">¶</a></h3> <p>在某些情況下，自訂推理運行時可能需要 編碼/解碼 為自訂資料類型。作為一個例子，我們可以想到只能對 <code>pillow</code> 圖像物件進行操作的電腦視覺模型。</p> <p>在這些場景中，可以擴展 <code>Codec</code> 介面來編寫我們的自訂編碼邏輯。編解碼器只是一個定義了 <code>decode()</code> 和 <code>encode()</code> 方法的物件。為了說明這是如何工作的，我們將擴展自訂運行時以添加自訂 <code>PillowCodec</code>。</p> <p>```python title-"runtime.py" import io import json</p> <p>from PIL import Image</p> <p>from mlserver import MLModel from mlserver.types import ( InferenceRequest, InferenceResponse, RequestInput, ResponseOutput, ) from mlserver.codecs import NumpyCodec, register_input_codec, DecodedParameterName from mlserver.codecs.utils import InputOrOutput</p> <p><em>to_exclude = { "parameters": {DecodedParameterName}, "inputs": {"__all_</em>": {"parameters": {DecodedParameterName}}}, }</p> <p><a class="magiclink magiclink-github magiclink-mention" href=https://github.com/register_input_codec title="GitHub User: register_input_codec">@register_input_codec</a> class PillowCodec(NumpyCodec): ContentType = "img" DefaultMode = "L"</p> <div class=highlight><pre><span></span><code>@classmethod
-def can_encode(cls, payload: Image) -&gt; bool:
-    return isinstance(payload, Image)
-
-@classmethod
-def _decode(cls, input_or_output: InputOrOutput) -&gt; Image:
-    if input_or_output.datatype != "BYTES":
-        # If not bytes, assume it's an array
-        image_array = super().decode_input(input_or_output)  # type: ignore
-        return Image.fromarray(image_array, mode=cls.DefaultMode)
-
-    encoded = input_or_output.data
-    if isinstance(encoded, str):
-        encoded = encoded.encode()
-
-    return Image.frombytes(
-        mode=cls.DefaultMode, size=input_or_output.shape, data=encoded
-    )
-
-@classmethod
-def encode_output(cls, name: str, payload: Image) -&gt; ResponseOutput:  # type: ignore
-    byte_array = io.BytesIO()
-    payload.save(byte_array, mode=cls.DefaultMode)
-
-    return ResponseOutput(
-        name=name, shape=payload.size, datatype="BYTES", data=byte_array.getvalue()
-    )
-
-@classmethod
-def decode_output(cls, response_output: ResponseOutput) -&gt; Image:
-    return cls._decode(response_output)
-
-@classmethod
-def encode_input(cls, name: str, payload: Image) -&gt; RequestInput:  # type: ignore
-    output = cls.encode_output(name, payload)
-    return RequestInput(
-        name=output.name,
-        shape=output.shape,
-        datatype=output.datatype,
-        data=output.data,
-    )
-
-@classmethod
-def decode_input(cls, request_input: RequestInput) -&gt; Image:
-    return cls._decode(request_input)
-</code></pre></div> <p>class EchoRuntime(MLModel): async def predict(self, payload: InferenceRequest) -&gt; InferenceResponse: outputs = [] for request_input in payload.inputs: decoded_input = self.decode(request_input) print(f"------ Encoded Input ({request_input.name}) ------") as_dict = request_input.dict(exclude=_to_exclude) # type: ignore print(json.dumps(as_dict, indent=2)) print(f"------ Decoded input ({request_input.name}) ------") print(decoded_input)</p> <div class=highlight><pre><span></span><code>        outputs.append(
-            ResponseOutput(
-                name=request_input.name,
-                datatype=request_input.datatype,
-                shape=request_input.shape,
-                data=request_input.data,
-            )
-        )
-
-    return InferenceResponse(model_name=self.name, outputs=outputs)
-</code></pre></div> <p><code>我們現在應該能夠重新啟動 MLServer 實例（即使用 `mlserver start .` 命令），以傳送一些測試請求。</code>python import requests payload = { "inputs": [ { "name": "image-int32", "datatype": "INT32", "shape": [8, 8], "data": [ 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0 ], "parameters": { "content_type": "img" } }, { "name": "image-bytes", "datatype": "BYTES", "shape": [8, 8], "data": ( "10101010" "10101010" "10101010" "10101010" "10101010" "10101010" "10101010" "10101010" ), "parameters": { "content_type": "img" } } ] } response = requests.post( "<a href=http://localhost:8080/v2/models/content-type-example/infer>http://localhost:8080/v2/models/content-type-example/infer</a>", json=payload ) ```</p> <p>正如您應該能夠在 MLServer 日誌中看到的那樣，伺服器現在能夠將有效負載解碼為 <code>Pillow</code> image。此範例也說明了 Codec 物件如何與多種資料類型值（例如本例中的張量和 BYTES）相容。</p> <h2 id=request-codecs>Request Codecs<a class=headerlink href=#request-codecs title="Permanent link">¶</a></h2> <p>到目前為止，我們已經了解如何指定編解碼器，以便將它們套用在 input level。但是，也可以使用請求範圍的編解碼器來聚合多個輸入來解碼有效負載。這通常與模型需要多列輸入類型的情況相關，例如 Pandas DataFrame。</p> <p>為了說明這一點，我們將首先調整 EchoRuntime，以便它在請求層級列印解碼的內容。</p> <div class=highlight><span class=filename>runtime.py</span><pre><span></span><code><a id=__codelineno-9-1 name=__codelineno-9-1 href=#__codelineno-9-1></a><span class=kn>import</span> <span class=nn>json</span>
+</code></pre></div> <p>正如您應該能夠在伺服器日誌中看到的那樣，MLServer 將根據模型元資料交叉引用輸入名稱以找到正確的內容類型。</p> <h3 id=codecs_1>客制 Codecs<a class=headerlink href=#codecs_1 title="Permanent link">¶</a></h3> <p>在某些情況下，自訂推理運行時可能需要 編碼/解碼 為自訂資料類型。作為一個例子，我們可以想到只能對 <code>pillow</code> 圖像物件進行操作的電腦視覺模型。</p> <p>在這些場景中，可以擴展 <code>Codec</code> 介面來編寫我們的自訂編碼邏輯。編解碼器只是一個定義了 <code>decode()</code> 和 <code>encode()</code> 方法的物件。為了說明這是如何工作的，我們將擴展自訂運行時以添加自訂 <code>PillowCodec</code>。</p> <div class=highlight><span class=filename>runtime.py</span><pre><span></span><code><a id=__codelineno-8-1 name=__codelineno-8-1 href=#__codelineno-8-1></a><span class=kn>import</span> <span class=nn>io</span>
+<a id=__codelineno-8-2 name=__codelineno-8-2 href=#__codelineno-8-2></a><span class=kn>import</span> <span class=nn>json</span>
+<a id=__codelineno-8-3 name=__codelineno-8-3 href=#__codelineno-8-3></a>
+<a id=__codelineno-8-4 name=__codelineno-8-4 href=#__codelineno-8-4></a><span class=kn>from</span> <span class=nn>PIL</span> <span class=kn>import</span> <span class=n>Image</span>
+<a id=__codelineno-8-5 name=__codelineno-8-5 href=#__codelineno-8-5></a>
+<a id=__codelineno-8-6 name=__codelineno-8-6 href=#__codelineno-8-6></a><span class=kn>from</span> <span class=nn>mlserver</span> <span class=kn>import</span> <span class=n>MLModel</span>
+<a id=__codelineno-8-7 name=__codelineno-8-7 href=#__codelineno-8-7></a><span class=kn>from</span> <span class=nn>mlserver.types</span> <span class=kn>import</span> <span class=p>(</span>
+<a id=__codelineno-8-8 name=__codelineno-8-8 href=#__codelineno-8-8></a>    <span class=n>InferenceRequest</span><span class=p>,</span>
+<a id=__codelineno-8-9 name=__codelineno-8-9 href=#__codelineno-8-9></a>    <span class=n>InferenceResponse</span><span class=p>,</span>
+<a id=__codelineno-8-10 name=__codelineno-8-10 href=#__codelineno-8-10></a>    <span class=n>RequestInput</span><span class=p>,</span>
+<a id=__codelineno-8-11 name=__codelineno-8-11 href=#__codelineno-8-11></a>    <span class=n>ResponseOutput</span><span class=p>,</span>
+<a id=__codelineno-8-12 name=__codelineno-8-12 href=#__codelineno-8-12></a><span class=p>)</span>
+<a id=__codelineno-8-13 name=__codelineno-8-13 href=#__codelineno-8-13></a><span class=kn>from</span> <span class=nn>mlserver.codecs</span> <span class=kn>import</span> <span class=n>NumpyCodec</span><span class=p>,</span> <span class=n>register_input_codec</span><span class=p>,</span> <span class=n>DecodedParameterName</span>
+<a id=__codelineno-8-14 name=__codelineno-8-14 href=#__codelineno-8-14></a><span class=kn>from</span> <span class=nn>mlserver.codecs.utils</span> <span class=kn>import</span> <span class=n>InputOrOutput</span>
+<a id=__codelineno-8-15 name=__codelineno-8-15 href=#__codelineno-8-15></a>
+<a id=__codelineno-8-16 name=__codelineno-8-16 href=#__codelineno-8-16></a><span class=n>_to_exclude</span> <span class=o>=</span> <span class=p>{</span>
+<a id=__codelineno-8-17 name=__codelineno-8-17 href=#__codelineno-8-17></a>    <span class=s2>"parameters"</span><span class=p>:</span> <span class=p>{</span><span class=n>DecodedParameterName</span><span class=p>},</span>
+<a id=__codelineno-8-18 name=__codelineno-8-18 href=#__codelineno-8-18></a>    <span class=s2>"inputs"</span><span class=p>:</span> <span class=p>{</span><span class=s2>"__all__"</span><span class=p>:</span> <span class=p>{</span><span class=s2>"parameters"</span><span class=p>:</span> <span class=p>{</span><span class=n>DecodedParameterName</span><span class=p>}}},</span>
+<a id=__codelineno-8-19 name=__codelineno-8-19 href=#__codelineno-8-19></a><span class=p>}</span>
+<a id=__codelineno-8-20 name=__codelineno-8-20 href=#__codelineno-8-20></a>
+<a id=__codelineno-8-21 name=__codelineno-8-21 href=#__codelineno-8-21></a><span class=nd>@register_input_codec</span>
+<a id=__codelineno-8-22 name=__codelineno-8-22 href=#__codelineno-8-22></a><span class=k>class</span> <span class=nc>PillowCodec</span><span class=p>(</span><span class=n>NumpyCodec</span><span class=p>):</span>
+<a id=__codelineno-8-23 name=__codelineno-8-23 href=#__codelineno-8-23></a>    <span class=n>ContentType</span> <span class=o>=</span> <span class=s2>"img"</span>
+<a id=__codelineno-8-24 name=__codelineno-8-24 href=#__codelineno-8-24></a>    <span class=n>DefaultMode</span> <span class=o>=</span> <span class=s2>"L"</span>
+<a id=__codelineno-8-25 name=__codelineno-8-25 href=#__codelineno-8-25></a>
+<a id=__codelineno-8-26 name=__codelineno-8-26 href=#__codelineno-8-26></a>    <span class=nd>@classmethod</span>
+<a id=__codelineno-8-27 name=__codelineno-8-27 href=#__codelineno-8-27></a>    <span class=k>def</span> <span class=nf>can_encode</span><span class=p>(</span><span class=bp>cls</span><span class=p>,</span> <span class=n>payload</span><span class=p>:</span> <span class=n>Image</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>bool</span><span class=p>:</span>
+<a id=__codelineno-8-28 name=__codelineno-8-28 href=#__codelineno-8-28></a>        <span class=k>return</span> <span class=nb>isinstance</span><span class=p>(</span><span class=n>payload</span><span class=p>,</span> <span class=n>Image</span><span class=p>)</span>
+<a id=__codelineno-8-29 name=__codelineno-8-29 href=#__codelineno-8-29></a>
+<a id=__codelineno-8-30 name=__codelineno-8-30 href=#__codelineno-8-30></a>    <span class=nd>@classmethod</span>
+<a id=__codelineno-8-31 name=__codelineno-8-31 href=#__codelineno-8-31></a>    <span class=k>def</span> <span class=nf>_decode</span><span class=p>(</span><span class=bp>cls</span><span class=p>,</span> <span class=n>input_or_output</span><span class=p>:</span> <span class=n>InputOrOutput</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=n>Image</span><span class=p>:</span>
+<a id=__codelineno-8-32 name=__codelineno-8-32 href=#__codelineno-8-32></a>        <span class=k>if</span> <span class=n>input_or_output</span><span class=o>.</span><span class=n>datatype</span> <span class=o>!=</span> <span class=s2>"BYTES"</span><span class=p>:</span>
+<a id=__codelineno-8-33 name=__codelineno-8-33 href=#__codelineno-8-33></a>            <span class=c1># If not bytes, assume it's an array</span>
+<a id=__codelineno-8-34 name=__codelineno-8-34 href=#__codelineno-8-34></a>            <span class=n>image_array</span> <span class=o>=</span> <span class=nb>super</span><span class=p>()</span><span class=o>.</span><span class=n>decode_input</span><span class=p>(</span><span class=n>input_or_output</span><span class=p>)</span>  <span class=c1># type: ignore</span>
+<a id=__codelineno-8-35 name=__codelineno-8-35 href=#__codelineno-8-35></a>            <span class=k>return</span> <span class=n>Image</span><span class=o>.</span><span class=n>fromarray</span><span class=p>(</span><span class=n>image_array</span><span class=p>,</span> <span class=n>mode</span><span class=o>=</span><span class=bp>cls</span><span class=o>.</span><span class=n>DefaultMode</span><span class=p>)</span>
+<a id=__codelineno-8-36 name=__codelineno-8-36 href=#__codelineno-8-36></a>
+<a id=__codelineno-8-37 name=__codelineno-8-37 href=#__codelineno-8-37></a>        <span class=n>encoded</span> <span class=o>=</span> <span class=n>input_or_output</span><span class=o>.</span><span class=n>data</span>
+<a id=__codelineno-8-38 name=__codelineno-8-38 href=#__codelineno-8-38></a>        <span class=k>if</span> <span class=nb>isinstance</span><span class=p>(</span><span class=n>encoded</span><span class=p>,</span> <span class=nb>str</span><span class=p>):</span>
+<a id=__codelineno-8-39 name=__codelineno-8-39 href=#__codelineno-8-39></a>            <span class=n>encoded</span> <span class=o>=</span> <span class=n>encoded</span><span class=o>.</span><span class=n>encode</span><span class=p>()</span>
+<a id=__codelineno-8-40 name=__codelineno-8-40 href=#__codelineno-8-40></a>
+<a id=__codelineno-8-41 name=__codelineno-8-41 href=#__codelineno-8-41></a>        <span class=k>return</span> <span class=n>Image</span><span class=o>.</span><span class=n>frombytes</span><span class=p>(</span>
+<a id=__codelineno-8-42 name=__codelineno-8-42 href=#__codelineno-8-42></a>            <span class=n>mode</span><span class=o>=</span><span class=bp>cls</span><span class=o>.</span><span class=n>DefaultMode</span><span class=p>,</span> <span class=n>size</span><span class=o>=</span><span class=n>input_or_output</span><span class=o>.</span><span class=n>shape</span><span class=p>,</span> <span class=n>data</span><span class=o>=</span><span class=n>encoded</span>
+<a id=__codelineno-8-43 name=__codelineno-8-43 href=#__codelineno-8-43></a>        <span class=p>)</span>
+<a id=__codelineno-8-44 name=__codelineno-8-44 href=#__codelineno-8-44></a>
+<a id=__codelineno-8-45 name=__codelineno-8-45 href=#__codelineno-8-45></a>    <span class=nd>@classmethod</span>
+<a id=__codelineno-8-46 name=__codelineno-8-46 href=#__codelineno-8-46></a>    <span class=k>def</span> <span class=nf>encode_output</span><span class=p>(</span><span class=bp>cls</span><span class=p>,</span> <span class=n>name</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span> <span class=n>payload</span><span class=p>:</span> <span class=n>Image</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=n>ResponseOutput</span><span class=p>:</span>  <span class=c1># type: ignore</span>
+<a id=__codelineno-8-47 name=__codelineno-8-47 href=#__codelineno-8-47></a>        <span class=n>byte_array</span> <span class=o>=</span> <span class=n>io</span><span class=o>.</span><span class=n>BytesIO</span><span class=p>()</span>
+<a id=__codelineno-8-48 name=__codelineno-8-48 href=#__codelineno-8-48></a>        <span class=n>payload</span><span class=o>.</span><span class=n>save</span><span class=p>(</span><span class=n>byte_array</span><span class=p>,</span> <span class=n>mode</span><span class=o>=</span><span class=bp>cls</span><span class=o>.</span><span class=n>DefaultMode</span><span class=p>)</span>
+<a id=__codelineno-8-49 name=__codelineno-8-49 href=#__codelineno-8-49></a>
+<a id=__codelineno-8-50 name=__codelineno-8-50 href=#__codelineno-8-50></a>        <span class=k>return</span> <span class=n>ResponseOutput</span><span class=p>(</span>
+<a id=__codelineno-8-51 name=__codelineno-8-51 href=#__codelineno-8-51></a>            <span class=n>name</span><span class=o>=</span><span class=n>name</span><span class=p>,</span> <span class=n>shape</span><span class=o>=</span><span class=n>payload</span><span class=o>.</span><span class=n>size</span><span class=p>,</span> <span class=n>datatype</span><span class=o>=</span><span class=s2>"BYTES"</span><span class=p>,</span> <span class=n>data</span><span class=o>=</span><span class=n>byte_array</span><span class=o>.</span><span class=n>getvalue</span><span class=p>()</span>
+<a id=__codelineno-8-52 name=__codelineno-8-52 href=#__codelineno-8-52></a>        <span class=p>)</span>
+<a id=__codelineno-8-53 name=__codelineno-8-53 href=#__codelineno-8-53></a>
+<a id=__codelineno-8-54 name=__codelineno-8-54 href=#__codelineno-8-54></a>    <span class=nd>@classmethod</span>
+<a id=__codelineno-8-55 name=__codelineno-8-55 href=#__codelineno-8-55></a>    <span class=k>def</span> <span class=nf>decode_output</span><span class=p>(</span><span class=bp>cls</span><span class=p>,</span> <span class=n>response_output</span><span class=p>:</span> <span class=n>ResponseOutput</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=n>Image</span><span class=p>:</span>
+<a id=__codelineno-8-56 name=__codelineno-8-56 href=#__codelineno-8-56></a>        <span class=k>return</span> <span class=bp>cls</span><span class=o>.</span><span class=n>_decode</span><span class=p>(</span><span class=n>response_output</span><span class=p>)</span>
+<a id=__codelineno-8-57 name=__codelineno-8-57 href=#__codelineno-8-57></a>
+<a id=__codelineno-8-58 name=__codelineno-8-58 href=#__codelineno-8-58></a>    <span class=nd>@classmethod</span>
+<a id=__codelineno-8-59 name=__codelineno-8-59 href=#__codelineno-8-59></a>    <span class=k>def</span> <span class=nf>encode_input</span><span class=p>(</span><span class=bp>cls</span><span class=p>,</span> <span class=n>name</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span> <span class=n>payload</span><span class=p>:</span> <span class=n>Image</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=n>RequestInput</span><span class=p>:</span>  <span class=c1># type: ignore</span>
+<a id=__codelineno-8-60 name=__codelineno-8-60 href=#__codelineno-8-60></a>        <span class=n>output</span> <span class=o>=</span> <span class=bp>cls</span><span class=o>.</span><span class=n>encode_output</span><span class=p>(</span><span class=n>name</span><span class=p>,</span> <span class=n>payload</span><span class=p>)</span>
+<a id=__codelineno-8-61 name=__codelineno-8-61 href=#__codelineno-8-61></a>        <span class=k>return</span> <span class=n>RequestInput</span><span class=p>(</span>
+<a id=__codelineno-8-62 name=__codelineno-8-62 href=#__codelineno-8-62></a>            <span class=n>name</span><span class=o>=</span><span class=n>output</span><span class=o>.</span><span class=n>name</span><span class=p>,</span>
+<a id=__codelineno-8-63 name=__codelineno-8-63 href=#__codelineno-8-63></a>            <span class=n>shape</span><span class=o>=</span><span class=n>output</span><span class=o>.</span><span class=n>shape</span><span class=p>,</span>
+<a id=__codelineno-8-64 name=__codelineno-8-64 href=#__codelineno-8-64></a>            <span class=n>datatype</span><span class=o>=</span><span class=n>output</span><span class=o>.</span><span class=n>datatype</span><span class=p>,</span>
+<a id=__codelineno-8-65 name=__codelineno-8-65 href=#__codelineno-8-65></a>            <span class=n>data</span><span class=o>=</span><span class=n>output</span><span class=o>.</span><span class=n>data</span><span class=p>,</span>
+<a id=__codelineno-8-66 name=__codelineno-8-66 href=#__codelineno-8-66></a>        <span class=p>)</span>
+<a id=__codelineno-8-67 name=__codelineno-8-67 href=#__codelineno-8-67></a>
+<a id=__codelineno-8-68 name=__codelineno-8-68 href=#__codelineno-8-68></a>    <span class=nd>@classmethod</span>
+<a id=__codelineno-8-69 name=__codelineno-8-69 href=#__codelineno-8-69></a>    <span class=k>def</span> <span class=nf>decode_input</span><span class=p>(</span><span class=bp>cls</span><span class=p>,</span> <span class=n>request_input</span><span class=p>:</span> <span class=n>RequestInput</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=n>Image</span><span class=p>:</span>
+<a id=__codelineno-8-70 name=__codelineno-8-70 href=#__codelineno-8-70></a>        <span class=k>return</span> <span class=bp>cls</span><span class=o>.</span><span class=n>_decode</span><span class=p>(</span><span class=n>request_input</span><span class=p>)</span>
+<a id=__codelineno-8-71 name=__codelineno-8-71 href=#__codelineno-8-71></a>
+<a id=__codelineno-8-72 name=__codelineno-8-72 href=#__codelineno-8-72></a><span class=k>class</span> <span class=nc>EchoRuntime</span><span class=p>(</span><span class=n>MLModel</span><span class=p>):</span>
+<a id=__codelineno-8-73 name=__codelineno-8-73 href=#__codelineno-8-73></a>    <span class=k>async</span> <span class=k>def</span> <span class=nf>predict</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>payload</span><span class=p>:</span> <span class=n>InferenceRequest</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=n>InferenceResponse</span><span class=p>:</span>
+<a id=__codelineno-8-74 name=__codelineno-8-74 href=#__codelineno-8-74></a>        <span class=n>outputs</span> <span class=o>=</span> <span class=p>[]</span>
+<a id=__codelineno-8-75 name=__codelineno-8-75 href=#__codelineno-8-75></a>        <span class=k>for</span> <span class=n>request_input</span> <span class=ow>in</span> <span class=n>payload</span><span class=o>.</span><span class=n>inputs</span><span class=p>:</span>
+<a id=__codelineno-8-76 name=__codelineno-8-76 href=#__codelineno-8-76></a>            <span class=n>decoded_input</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>decode</span><span class=p>(</span><span class=n>request_input</span><span class=p>)</span>
+<a id=__codelineno-8-77 name=__codelineno-8-77 href=#__codelineno-8-77></a>            <span class=nb>print</span><span class=p>(</span><span class=sa>f</span><span class=s2>"------ Encoded Input (</span><span class=si>{</span><span class=n>request_input</span><span class=o>.</span><span class=n>name</span><span class=si>}</span><span class=s2>) ------"</span><span class=p>)</span>
+<a id=__codelineno-8-78 name=__codelineno-8-78 href=#__codelineno-8-78></a>            <span class=n>as_dict</span> <span class=o>=</span> <span class=n>request_input</span><span class=o>.</span><span class=n>dict</span><span class=p>(</span><span class=n>exclude</span><span class=o>=</span><span class=n>_to_exclude</span><span class=p>)</span>  <span class=c1># type: ignore</span>
+<a id=__codelineno-8-79 name=__codelineno-8-79 href=#__codelineno-8-79></a>            <span class=nb>print</span><span class=p>(</span><span class=n>json</span><span class=o>.</span><span class=n>dumps</span><span class=p>(</span><span class=n>as_dict</span><span class=p>,</span> <span class=n>indent</span><span class=o>=</span><span class=mi>2</span><span class=p>))</span>
+<a id=__codelineno-8-80 name=__codelineno-8-80 href=#__codelineno-8-80></a>            <span class=nb>print</span><span class=p>(</span><span class=sa>f</span><span class=s2>"------ Decoded input (</span><span class=si>{</span><span class=n>request_input</span><span class=o>.</span><span class=n>name</span><span class=si>}</span><span class=s2>) ------"</span><span class=p>)</span>
+<a id=__codelineno-8-81 name=__codelineno-8-81 href=#__codelineno-8-81></a>            <span class=nb>print</span><span class=p>(</span><span class=n>decoded_input</span><span class=p>)</span>
+<a id=__codelineno-8-82 name=__codelineno-8-82 href=#__codelineno-8-82></a>
+<a id=__codelineno-8-83 name=__codelineno-8-83 href=#__codelineno-8-83></a>            <span class=n>outputs</span><span class=o>.</span><span class=n>append</span><span class=p>(</span>
+<a id=__codelineno-8-84 name=__codelineno-8-84 href=#__codelineno-8-84></a>                <span class=n>ResponseOutput</span><span class=p>(</span>
+<a id=__codelineno-8-85 name=__codelineno-8-85 href=#__codelineno-8-85></a>                    <span class=n>name</span><span class=o>=</span><span class=n>request_input</span><span class=o>.</span><span class=n>name</span><span class=p>,</span>
+<a id=__codelineno-8-86 name=__codelineno-8-86 href=#__codelineno-8-86></a>                    <span class=n>datatype</span><span class=o>=</span><span class=n>request_input</span><span class=o>.</span><span class=n>datatype</span><span class=p>,</span>
+<a id=__codelineno-8-87 name=__codelineno-8-87 href=#__codelineno-8-87></a>                    <span class=n>shape</span><span class=o>=</span><span class=n>request_input</span><span class=o>.</span><span class=n>shape</span><span class=p>,</span>
+<a id=__codelineno-8-88 name=__codelineno-8-88 href=#__codelineno-8-88></a>                    <span class=n>data</span><span class=o>=</span><span class=n>request_input</span><span class=o>.</span><span class=n>data</span><span class=p>,</span>
+<a id=__codelineno-8-89 name=__codelineno-8-89 href=#__codelineno-8-89></a>                <span class=p>)</span>
+<a id=__codelineno-8-90 name=__codelineno-8-90 href=#__codelineno-8-90></a>            <span class=p>)</span>
+<a id=__codelineno-8-91 name=__codelineno-8-91 href=#__codelineno-8-91></a>
+<a id=__codelineno-8-92 name=__codelineno-8-92 href=#__codelineno-8-92></a>        <span class=k>return</span> <span class=n>InferenceResponse</span><span class=p>(</span><span class=n>model_name</span><span class=o>=</span><span class=bp>self</span><span class=o>.</span><span class=n>name</span><span class=p>,</span> <span class=n>outputs</span><span class=o>=</span><span class=n>outputs</span><span class=p>)</span>
+</code></pre></div> <p>我們現在應該能夠重新啟動 MLServer 實例（即使用 <code>mlserver start .</code> 命令），以傳送一些測試請求。</p> <div class=highlight><pre><span></span><code><a id=__codelineno-9-1 name=__codelineno-9-1 href=#__codelineno-9-1></a><span class=kn>import</span> <span class=nn>requests</span>
 <a id=__codelineno-9-2 name=__codelineno-9-2 href=#__codelineno-9-2></a>
-<a id=__codelineno-9-3 name=__codelineno-9-3 href=#__codelineno-9-3></a><span class=kn>from</span> <span class=nn>mlserver</span> <span class=kn>import</span> <span class=n>MLModel</span>
-<a id=__codelineno-9-4 name=__codelineno-9-4 href=#__codelineno-9-4></a><span class=kn>from</span> <span class=nn>mlserver.types</span> <span class=kn>import</span> <span class=n>InferenceRequest</span><span class=p>,</span> <span class=n>InferenceResponse</span><span class=p>,</span> <span class=n>ResponseOutput</span>
-<a id=__codelineno-9-5 name=__codelineno-9-5 href=#__codelineno-9-5></a><span class=kn>from</span> <span class=nn>mlserver.codecs</span> <span class=kn>import</span> <span class=n>DecodedParameterName</span>
-<a id=__codelineno-9-6 name=__codelineno-9-6 href=#__codelineno-9-6></a>
-<a id=__codelineno-9-7 name=__codelineno-9-7 href=#__codelineno-9-7></a><span class=n>_to_exclude</span> <span class=o>=</span> <span class=p>{</span>
-<a id=__codelineno-9-8 name=__codelineno-9-8 href=#__codelineno-9-8></a>    <span class=s2>"parameters"</span><span class=p>:</span> <span class=p>{</span><span class=n>DecodedParameterName</span><span class=p>},</span>
-<a id=__codelineno-9-9 name=__codelineno-9-9 href=#__codelineno-9-9></a>    <span class=s1>'inputs'</span><span class=p>:</span> <span class=p>{</span><span class=s2>"__all__"</span><span class=p>:</span> <span class=p>{</span><span class=s2>"parameters"</span><span class=p>:</span> <span class=p>{</span><span class=n>DecodedParameterName</span><span class=p>}}}</span>
-<a id=__codelineno-9-10 name=__codelineno-9-10 href=#__codelineno-9-10></a><span class=p>}</span>
-<a id=__codelineno-9-11 name=__codelineno-9-11 href=#__codelineno-9-11></a>
-<a id=__codelineno-9-12 name=__codelineno-9-12 href=#__codelineno-9-12></a><span class=k>class</span> <span class=nc>EchoRuntime</span><span class=p>(</span><span class=n>MLModel</span><span class=p>):</span>
-<a id=__codelineno-9-13 name=__codelineno-9-13 href=#__codelineno-9-13></a>    <span class=k>async</span> <span class=k>def</span> <span class=nf>predict</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>payload</span><span class=p>:</span> <span class=n>InferenceRequest</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=n>InferenceResponse</span><span class=p>:</span>
-<a id=__codelineno-9-14 name=__codelineno-9-14 href=#__codelineno-9-14></a>        <span class=nb>print</span><span class=p>(</span><span class=s2>"------ Encoded Input (request) ------"</span><span class=p>)</span>
-<a id=__codelineno-9-15 name=__codelineno-9-15 href=#__codelineno-9-15></a>        <span class=n>as_dict</span> <span class=o>=</span> <span class=n>payload</span><span class=o>.</span><span class=n>dict</span><span class=p>(</span><span class=n>exclude</span><span class=o>=</span><span class=n>_to_exclude</span><span class=p>)</span>  <span class=c1># type: ignore</span>
-<a id=__codelineno-9-16 name=__codelineno-9-16 href=#__codelineno-9-16></a>        <span class=nb>print</span><span class=p>(</span><span class=n>json</span><span class=o>.</span><span class=n>dumps</span><span class=p>(</span><span class=n>as_dict</span><span class=p>,</span> <span class=n>indent</span><span class=o>=</span><span class=mi>2</span><span class=p>))</span>
-<a id=__codelineno-9-17 name=__codelineno-9-17 href=#__codelineno-9-17></a>        <span class=nb>print</span><span class=p>(</span><span class=s2>"------ Decoded input (request) ------"</span><span class=p>)</span>
-<a id=__codelineno-9-18 name=__codelineno-9-18 href=#__codelineno-9-18></a>        <span class=n>decoded_request</span> <span class=o>=</span> <span class=kc>None</span>
-<a id=__codelineno-9-19 name=__codelineno-9-19 href=#__codelineno-9-19></a>        <span class=k>if</span> <span class=n>payload</span><span class=o>.</span><span class=n>parameters</span><span class=p>:</span>
-<a id=__codelineno-9-20 name=__codelineno-9-20 href=#__codelineno-9-20></a>            <span class=n>decoded_request</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>payload</span><span class=o>.</span><span class=n>parameters</span><span class=p>,</span> <span class=n>DecodedParameterName</span><span class=p>)</span>
-<a id=__codelineno-9-21 name=__codelineno-9-21 href=#__codelineno-9-21></a>        <span class=nb>print</span><span class=p>(</span><span class=n>decoded_request</span><span class=p>)</span>
-<a id=__codelineno-9-22 name=__codelineno-9-22 href=#__codelineno-9-22></a>
-<a id=__codelineno-9-23 name=__codelineno-9-23 href=#__codelineno-9-23></a>        <span class=n>outputs</span> <span class=o>=</span> <span class=p>[]</span>
-<a id=__codelineno-9-24 name=__codelineno-9-24 href=#__codelineno-9-24></a>        <span class=k>for</span> <span class=n>request_input</span> <span class=ow>in</span> <span class=n>payload</span><span class=o>.</span><span class=n>inputs</span><span class=p>:</span>
-<a id=__codelineno-9-25 name=__codelineno-9-25 href=#__codelineno-9-25></a>            <span class=n>outputs</span><span class=o>.</span><span class=n>append</span><span class=p>(</span>
-<a id=__codelineno-9-26 name=__codelineno-9-26 href=#__codelineno-9-26></a>                <span class=n>ResponseOutput</span><span class=p>(</span>
-<a id=__codelineno-9-27 name=__codelineno-9-27 href=#__codelineno-9-27></a>                    <span class=n>name</span><span class=o>=</span><span class=n>request_input</span><span class=o>.</span><span class=n>name</span><span class=p>,</span>
-<a id=__codelineno-9-28 name=__codelineno-9-28 href=#__codelineno-9-28></a>                    <span class=n>datatype</span><span class=o>=</span><span class=n>request_input</span><span class=o>.</span><span class=n>datatype</span><span class=p>,</span>
-<a id=__codelineno-9-29 name=__codelineno-9-29 href=#__codelineno-9-29></a>                    <span class=n>shape</span><span class=o>=</span><span class=n>request_input</span><span class=o>.</span><span class=n>shape</span><span class=p>,</span>
-<a id=__codelineno-9-30 name=__codelineno-9-30 href=#__codelineno-9-30></a>                    <span class=n>data</span><span class=o>=</span><span class=n>request_input</span><span class=o>.</span><span class=n>data</span>
-<a id=__codelineno-9-31 name=__codelineno-9-31 href=#__codelineno-9-31></a>                <span class=p>)</span>
-<a id=__codelineno-9-32 name=__codelineno-9-32 href=#__codelineno-9-32></a>            <span class=p>)</span>
-<a id=__codelineno-9-33 name=__codelineno-9-33 href=#__codelineno-9-33></a>
-<a id=__codelineno-9-34 name=__codelineno-9-34 href=#__codelineno-9-34></a>        <span class=k>return</span> <span class=n>InferenceResponse</span><span class=p>(</span><span class=n>model_name</span><span class=o>=</span><span class=bp>self</span><span class=o>.</span><span class=n>name</span><span class=p>,</span> <span class=n>outputs</span><span class=o>=</span><span class=n>outputs</span><span class=p>)</span>
-</code></pre></div> <p>我們現在應該能夠重新啟動 MLServer 實例（即使用 <code>mlserver start .</code> 命令），以傳送一些測試請求。</p> <div class=highlight><pre><span></span><code><a id=__codelineno-10-1 name=__codelineno-10-1 href=#__codelineno-10-1></a><span class=kn>import</span> <span class=nn>requests</span>
+<a id=__codelineno-9-3 name=__codelineno-9-3 href=#__codelineno-9-3></a><span class=n>payload</span> <span class=o>=</span> <span class=p>{</span>
+<a id=__codelineno-9-4 name=__codelineno-9-4 href=#__codelineno-9-4></a>    <span class=s2>"inputs"</span><span class=p>:</span> <span class=p>[</span>
+<a id=__codelineno-9-5 name=__codelineno-9-5 href=#__codelineno-9-5></a>        <span class=p>{</span>
+<a id=__codelineno-9-6 name=__codelineno-9-6 href=#__codelineno-9-6></a>            <span class=s2>"name"</span><span class=p>:</span> <span class=s2>"image-int32"</span><span class=p>,</span>
+<a id=__codelineno-9-7 name=__codelineno-9-7 href=#__codelineno-9-7></a>            <span class=s2>"datatype"</span><span class=p>:</span> <span class=s2>"INT32"</span><span class=p>,</span>
+<a id=__codelineno-9-8 name=__codelineno-9-8 href=#__codelineno-9-8></a>            <span class=s2>"shape"</span><span class=p>:</span> <span class=p>[</span><span class=mi>8</span><span class=p>,</span> <span class=mi>8</span><span class=p>],</span>
+<a id=__codelineno-9-9 name=__codelineno-9-9 href=#__codelineno-9-9></a>            <span class=s2>"data"</span><span class=p>:</span> <span class=p>[</span>
+<a id=__codelineno-9-10 name=__codelineno-9-10 href=#__codelineno-9-10></a>                <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span>
+<a id=__codelineno-9-11 name=__codelineno-9-11 href=#__codelineno-9-11></a>                <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span>
+<a id=__codelineno-9-12 name=__codelineno-9-12 href=#__codelineno-9-12></a>                <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span>
+<a id=__codelineno-9-13 name=__codelineno-9-13 href=#__codelineno-9-13></a>                <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span>
+<a id=__codelineno-9-14 name=__codelineno-9-14 href=#__codelineno-9-14></a>                <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span>
+<a id=__codelineno-9-15 name=__codelineno-9-15 href=#__codelineno-9-15></a>                <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span>
+<a id=__codelineno-9-16 name=__codelineno-9-16 href=#__codelineno-9-16></a>                <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span>
+<a id=__codelineno-9-17 name=__codelineno-9-17 href=#__codelineno-9-17></a>                <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=mi>0</span>
+<a id=__codelineno-9-18 name=__codelineno-9-18 href=#__codelineno-9-18></a>            <span class=p>],</span>
+<a id=__codelineno-9-19 name=__codelineno-9-19 href=#__codelineno-9-19></a>            <span class=s2>"parameters"</span><span class=p>:</span> <span class=p>{</span>
+<a id=__codelineno-9-20 name=__codelineno-9-20 href=#__codelineno-9-20></a>                <span class=s2>"content_type"</span><span class=p>:</span> <span class=s2>"img"</span>
+<a id=__codelineno-9-21 name=__codelineno-9-21 href=#__codelineno-9-21></a>            <span class=p>}</span>
+<a id=__codelineno-9-22 name=__codelineno-9-22 href=#__codelineno-9-22></a>        <span class=p>},</span>
+<a id=__codelineno-9-23 name=__codelineno-9-23 href=#__codelineno-9-23></a>        <span class=p>{</span>
+<a id=__codelineno-9-24 name=__codelineno-9-24 href=#__codelineno-9-24></a>            <span class=s2>"name"</span><span class=p>:</span> <span class=s2>"image-bytes"</span><span class=p>,</span>
+<a id=__codelineno-9-25 name=__codelineno-9-25 href=#__codelineno-9-25></a>            <span class=s2>"datatype"</span><span class=p>:</span> <span class=s2>"BYTES"</span><span class=p>,</span>
+<a id=__codelineno-9-26 name=__codelineno-9-26 href=#__codelineno-9-26></a>            <span class=s2>"shape"</span><span class=p>:</span> <span class=p>[</span><span class=mi>8</span><span class=p>,</span> <span class=mi>8</span><span class=p>],</span>
+<a id=__codelineno-9-27 name=__codelineno-9-27 href=#__codelineno-9-27></a>            <span class=s2>"data"</span><span class=p>:</span> <span class=p>(</span>
+<a id=__codelineno-9-28 name=__codelineno-9-28 href=#__codelineno-9-28></a>                <span class=s2>"10101010"</span>
+<a id=__codelineno-9-29 name=__codelineno-9-29 href=#__codelineno-9-29></a>                <span class=s2>"10101010"</span>
+<a id=__codelineno-9-30 name=__codelineno-9-30 href=#__codelineno-9-30></a>                <span class=s2>"10101010"</span>
+<a id=__codelineno-9-31 name=__codelineno-9-31 href=#__codelineno-9-31></a>                <span class=s2>"10101010"</span>
+<a id=__codelineno-9-32 name=__codelineno-9-32 href=#__codelineno-9-32></a>                <span class=s2>"10101010"</span>
+<a id=__codelineno-9-33 name=__codelineno-9-33 href=#__codelineno-9-33></a>                <span class=s2>"10101010"</span>
+<a id=__codelineno-9-34 name=__codelineno-9-34 href=#__codelineno-9-34></a>                <span class=s2>"10101010"</span>
+<a id=__codelineno-9-35 name=__codelineno-9-35 href=#__codelineno-9-35></a>                <span class=s2>"10101010"</span>
+<a id=__codelineno-9-36 name=__codelineno-9-36 href=#__codelineno-9-36></a>            <span class=p>),</span>
+<a id=__codelineno-9-37 name=__codelineno-9-37 href=#__codelineno-9-37></a>            <span class=s2>"parameters"</span><span class=p>:</span> <span class=p>{</span>
+<a id=__codelineno-9-38 name=__codelineno-9-38 href=#__codelineno-9-38></a>                <span class=s2>"content_type"</span><span class=p>:</span> <span class=s2>"img"</span>
+<a id=__codelineno-9-39 name=__codelineno-9-39 href=#__codelineno-9-39></a>            <span class=p>}</span>
+<a id=__codelineno-9-40 name=__codelineno-9-40 href=#__codelineno-9-40></a>        <span class=p>}</span>
+<a id=__codelineno-9-41 name=__codelineno-9-41 href=#__codelineno-9-41></a>    <span class=p>]</span>
+<a id=__codelineno-9-42 name=__codelineno-9-42 href=#__codelineno-9-42></a><span class=p>}</span>
+<a id=__codelineno-9-43 name=__codelineno-9-43 href=#__codelineno-9-43></a>
+<a id=__codelineno-9-44 name=__codelineno-9-44 href=#__codelineno-9-44></a><span class=n>response</span> <span class=o>=</span> <span class=n>requests</span><span class=o>.</span><span class=n>post</span><span class=p>(</span>
+<a id=__codelineno-9-45 name=__codelineno-9-45 href=#__codelineno-9-45></a>    <span class=s2>"http://localhost:8080/v2/models/content-type-example/infer"</span><span class=p>,</span>
+<a id=__codelineno-9-46 name=__codelineno-9-46 href=#__codelineno-9-46></a>    <span class=n>json</span><span class=o>=</span><span class=n>payload</span>
+<a id=__codelineno-9-47 name=__codelineno-9-47 href=#__codelineno-9-47></a><span class=p>)</span>
+</code></pre></div> <p>正如您應該能夠在 MLServer 日誌中看到的那樣，伺服器現在能夠將有效負載解碼為 <code>Pillow</code> image。此範例也說明了 Codec 物件如何與多種資料類型值（例如本例中的張量和 BYTES）相容。</p> <h2 id=request-codecs>Request Codecs<a class=headerlink href=#request-codecs title="Permanent link">¶</a></h2> <p>到目前為止，我們已經了解如何指定編解碼器，以便將它們套用在 input level。但是，也可以使用請求範圍的編解碼器來聚合多個輸入來解碼有效負載。這通常與模型需要多列輸入類型的情況相關，例如 Pandas DataFrame。</p> <p>為了說明這一點，我們將首先調整 EchoRuntime，以便它在請求層級列印解碼的內容。</p> <div class=highlight><span class=filename>runtime.py</span><pre><span></span><code><a id=__codelineno-10-1 name=__codelineno-10-1 href=#__codelineno-10-1></a><span class=kn>import</span> <span class=nn>json</span>
 <a id=__codelineno-10-2 name=__codelineno-10-2 href=#__codelineno-10-2></a>
-<a id=__codelineno-10-3 name=__codelineno-10-3 href=#__codelineno-10-3></a><span class=n>payload</span> <span class=o>=</span> <span class=p>{</span>
-<a id=__codelineno-10-4 name=__codelineno-10-4 href=#__codelineno-10-4></a>    <span class=s2>"inputs"</span><span class=p>:</span> <span class=p>[</span>
-<a id=__codelineno-10-5 name=__codelineno-10-5 href=#__codelineno-10-5></a>        <span class=p>{</span>
-<a id=__codelineno-10-6 name=__codelineno-10-6 href=#__codelineno-10-6></a>            <span class=s2>"name"</span><span class=p>:</span> <span class=s2>"parameters-np"</span><span class=p>,</span>
-<a id=__codelineno-10-7 name=__codelineno-10-7 href=#__codelineno-10-7></a>            <span class=s2>"datatype"</span><span class=p>:</span> <span class=s2>"INT32"</span><span class=p>,</span>
-<a id=__codelineno-10-8 name=__codelineno-10-8 href=#__codelineno-10-8></a>            <span class=s2>"shape"</span><span class=p>:</span> <span class=p>[</span><span class=mi>2</span><span class=p>,</span> <span class=mi>2</span><span class=p>],</span>
-<a id=__codelineno-10-9 name=__codelineno-10-9 href=#__codelineno-10-9></a>            <span class=s2>"data"</span><span class=p>:</span> <span class=p>[</span><span class=mi>1</span><span class=p>,</span> <span class=mi>2</span><span class=p>,</span> <span class=mi>3</span><span class=p>,</span> <span class=mi>4</span><span class=p>],</span>
-<a id=__codelineno-10-10 name=__codelineno-10-10 href=#__codelineno-10-10></a>            <span class=s2>"parameters"</span><span class=p>:</span> <span class=p>{</span>
-<a id=__codelineno-10-11 name=__codelineno-10-11 href=#__codelineno-10-11></a>                <span class=s2>"content_type"</span><span class=p>:</span> <span class=s2>"np"</span>
-<a id=__codelineno-10-12 name=__codelineno-10-12 href=#__codelineno-10-12></a>            <span class=p>}</span>
-<a id=__codelineno-10-13 name=__codelineno-10-13 href=#__codelineno-10-13></a>        <span class=p>},</span>
-<a id=__codelineno-10-14 name=__codelineno-10-14 href=#__codelineno-10-14></a>        <span class=p>{</span>
-<a id=__codelineno-10-15 name=__codelineno-10-15 href=#__codelineno-10-15></a>            <span class=s2>"name"</span><span class=p>:</span> <span class=s2>"parameters-str"</span><span class=p>,</span>
-<a id=__codelineno-10-16 name=__codelineno-10-16 href=#__codelineno-10-16></a>            <span class=s2>"datatype"</span><span class=p>:</span> <span class=s2>"BYTES"</span><span class=p>,</span>
-<a id=__codelineno-10-17 name=__codelineno-10-17 href=#__codelineno-10-17></a>            <span class=s2>"shape"</span><span class=p>:</span> <span class=p>[</span><span class=mi>2</span><span class=p>,</span> <span class=mi>11</span><span class=p>],</span>
-<a id=__codelineno-10-18 name=__codelineno-10-18 href=#__codelineno-10-18></a>            <span class=s2>"data"</span><span class=p>:</span> <span class=p>[</span><span class=s2>"hello world 😁"</span><span class=p>,</span> <span class=s2>"bye bye 😁"</span><span class=p>],</span>
-<a id=__codelineno-10-19 name=__codelineno-10-19 href=#__codelineno-10-19></a>            <span class=s2>"parameters"</span><span class=p>:</span> <span class=p>{</span>
-<a id=__codelineno-10-20 name=__codelineno-10-20 href=#__codelineno-10-20></a>                <span class=s2>"content_type"</span><span class=p>:</span> <span class=s2>"str"</span>
-<a id=__codelineno-10-21 name=__codelineno-10-21 href=#__codelineno-10-21></a>            <span class=p>}</span>
-<a id=__codelineno-10-22 name=__codelineno-10-22 href=#__codelineno-10-22></a>        <span class=p>}</span>
-<a id=__codelineno-10-23 name=__codelineno-10-23 href=#__codelineno-10-23></a>    <span class=p>],</span>
-<a id=__codelineno-10-24 name=__codelineno-10-24 href=#__codelineno-10-24></a>    <span class=s2>"parameters"</span><span class=p>:</span> <span class=p>{</span>
-<a id=__codelineno-10-25 name=__codelineno-10-25 href=#__codelineno-10-25></a>        <span class=s2>"content_type"</span><span class=p>:</span> <span class=s2>"pd"</span>
-<a id=__codelineno-10-26 name=__codelineno-10-26 href=#__codelineno-10-26></a>    <span class=p>}</span>
-<a id=__codelineno-10-27 name=__codelineno-10-27 href=#__codelineno-10-27></a><span class=p>}</span>
-<a id=__codelineno-10-28 name=__codelineno-10-28 href=#__codelineno-10-28></a>
-<a id=__codelineno-10-29 name=__codelineno-10-29 href=#__codelineno-10-29></a><span class=n>response</span> <span class=o>=</span> <span class=n>requests</span><span class=o>.</span><span class=n>post</span><span class=p>(</span>
-<a id=__codelineno-10-30 name=__codelineno-10-30 href=#__codelineno-10-30></a>    <span class=s2>"http://localhost:8080/v2/models/content-type-example/infer"</span><span class=p>,</span>
-<a id=__codelineno-10-31 name=__codelineno-10-31 href=#__codelineno-10-31></a>    <span class=n>json</span><span class=o>=</span><span class=n>payload</span>
-<a id=__codelineno-10-32 name=__codelineno-10-32 href=#__codelineno-10-32></a><span class=p>)</span>
+<a id=__codelineno-10-3 name=__codelineno-10-3 href=#__codelineno-10-3></a><span class=kn>from</span> <span class=nn>mlserver</span> <span class=kn>import</span> <span class=n>MLModel</span>
+<a id=__codelineno-10-4 name=__codelineno-10-4 href=#__codelineno-10-4></a><span class=kn>from</span> <span class=nn>mlserver.types</span> <span class=kn>import</span> <span class=n>InferenceRequest</span><span class=p>,</span> <span class=n>InferenceResponse</span><span class=p>,</span> <span class=n>ResponseOutput</span>
+<a id=__codelineno-10-5 name=__codelineno-10-5 href=#__codelineno-10-5></a><span class=kn>from</span> <span class=nn>mlserver.codecs</span> <span class=kn>import</span> <span class=n>DecodedParameterName</span>
+<a id=__codelineno-10-6 name=__codelineno-10-6 href=#__codelineno-10-6></a>
+<a id=__codelineno-10-7 name=__codelineno-10-7 href=#__codelineno-10-7></a><span class=n>_to_exclude</span> <span class=o>=</span> <span class=p>{</span>
+<a id=__codelineno-10-8 name=__codelineno-10-8 href=#__codelineno-10-8></a>    <span class=s2>"parameters"</span><span class=p>:</span> <span class=p>{</span><span class=n>DecodedParameterName</span><span class=p>},</span>
+<a id=__codelineno-10-9 name=__codelineno-10-9 href=#__codelineno-10-9></a>    <span class=s1>'inputs'</span><span class=p>:</span> <span class=p>{</span><span class=s2>"__all__"</span><span class=p>:</span> <span class=p>{</span><span class=s2>"parameters"</span><span class=p>:</span> <span class=p>{</span><span class=n>DecodedParameterName</span><span class=p>}}}</span>
+<a id=__codelineno-10-10 name=__codelineno-10-10 href=#__codelineno-10-10></a><span class=p>}</span>
+<a id=__codelineno-10-11 name=__codelineno-10-11 href=#__codelineno-10-11></a>
+<a id=__codelineno-10-12 name=__codelineno-10-12 href=#__codelineno-10-12></a><span class=k>class</span> <span class=nc>EchoRuntime</span><span class=p>(</span><span class=n>MLModel</span><span class=p>):</span>
+<a id=__codelineno-10-13 name=__codelineno-10-13 href=#__codelineno-10-13></a>    <span class=k>async</span> <span class=k>def</span> <span class=nf>predict</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>payload</span><span class=p>:</span> <span class=n>InferenceRequest</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=n>InferenceResponse</span><span class=p>:</span>
+<a id=__codelineno-10-14 name=__codelineno-10-14 href=#__codelineno-10-14></a>        <span class=nb>print</span><span class=p>(</span><span class=s2>"------ Encoded Input (request) ------"</span><span class=p>)</span>
+<a id=__codelineno-10-15 name=__codelineno-10-15 href=#__codelineno-10-15></a>        <span class=n>as_dict</span> <span class=o>=</span> <span class=n>payload</span><span class=o>.</span><span class=n>dict</span><span class=p>(</span><span class=n>exclude</span><span class=o>=</span><span class=n>_to_exclude</span><span class=p>)</span>  <span class=c1># type: ignore</span>
+<a id=__codelineno-10-16 name=__codelineno-10-16 href=#__codelineno-10-16></a>        <span class=nb>print</span><span class=p>(</span><span class=n>json</span><span class=o>.</span><span class=n>dumps</span><span class=p>(</span><span class=n>as_dict</span><span class=p>,</span> <span class=n>indent</span><span class=o>=</span><span class=mi>2</span><span class=p>))</span>
+<a id=__codelineno-10-17 name=__codelineno-10-17 href=#__codelineno-10-17></a>        <span class=nb>print</span><span class=p>(</span><span class=s2>"------ Decoded input (request) ------"</span><span class=p>)</span>
+<a id=__codelineno-10-18 name=__codelineno-10-18 href=#__codelineno-10-18></a>        <span class=n>decoded_request</span> <span class=o>=</span> <span class=kc>None</span>
+<a id=__codelineno-10-19 name=__codelineno-10-19 href=#__codelineno-10-19></a>        <span class=k>if</span> <span class=n>payload</span><span class=o>.</span><span class=n>parameters</span><span class=p>:</span>
+<a id=__codelineno-10-20 name=__codelineno-10-20 href=#__codelineno-10-20></a>            <span class=n>decoded_request</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>payload</span><span class=o>.</span><span class=n>parameters</span><span class=p>,</span> <span class=n>DecodedParameterName</span><span class=p>)</span>
+<a id=__codelineno-10-21 name=__codelineno-10-21 href=#__codelineno-10-21></a>        <span class=nb>print</span><span class=p>(</span><span class=n>decoded_request</span><span class=p>)</span>
+<a id=__codelineno-10-22 name=__codelineno-10-22 href=#__codelineno-10-22></a>
+<a id=__codelineno-10-23 name=__codelineno-10-23 href=#__codelineno-10-23></a>        <span class=n>outputs</span> <span class=o>=</span> <span class=p>[]</span>
+<a id=__codelineno-10-24 name=__codelineno-10-24 href=#__codelineno-10-24></a>        <span class=k>for</span> <span class=n>request_input</span> <span class=ow>in</span> <span class=n>payload</span><span class=o>.</span><span class=n>inputs</span><span class=p>:</span>
+<a id=__codelineno-10-25 name=__codelineno-10-25 href=#__codelineno-10-25></a>            <span class=n>outputs</span><span class=o>.</span><span class=n>append</span><span class=p>(</span>
+<a id=__codelineno-10-26 name=__codelineno-10-26 href=#__codelineno-10-26></a>                <span class=n>ResponseOutput</span><span class=p>(</span>
+<a id=__codelineno-10-27 name=__codelineno-10-27 href=#__codelineno-10-27></a>                    <span class=n>name</span><span class=o>=</span><span class=n>request_input</span><span class=o>.</span><span class=n>name</span><span class=p>,</span>
+<a id=__codelineno-10-28 name=__codelineno-10-28 href=#__codelineno-10-28></a>                    <span class=n>datatype</span><span class=o>=</span><span class=n>request_input</span><span class=o>.</span><span class=n>datatype</span><span class=p>,</span>
+<a id=__codelineno-10-29 name=__codelineno-10-29 href=#__codelineno-10-29></a>                    <span class=n>shape</span><span class=o>=</span><span class=n>request_input</span><span class=o>.</span><span class=n>shape</span><span class=p>,</span>
+<a id=__codelineno-10-30 name=__codelineno-10-30 href=#__codelineno-10-30></a>                    <span class=n>data</span><span class=o>=</span><span class=n>request_input</span><span class=o>.</span><span class=n>data</span>
+<a id=__codelineno-10-31 name=__codelineno-10-31 href=#__codelineno-10-31></a>                <span class=p>)</span>
+<a id=__codelineno-10-32 name=__codelineno-10-32 href=#__codelineno-10-32></a>            <span class=p>)</span>
+<a id=__codelineno-10-33 name=__codelineno-10-33 href=#__codelineno-10-33></a>
+<a id=__codelineno-10-34 name=__codelineno-10-34 href=#__codelineno-10-34></a>        <span class=k>return</span> <span class=n>InferenceResponse</span><span class=p>(</span><span class=n>model_name</span><span class=o>=</span><span class=bp>self</span><span class=o>.</span><span class=n>name</span><span class=p>,</span> <span class=n>outputs</span><span class=o>=</span><span class=n>outputs</span><span class=p>)</span>
+</code></pre></div> <p>我們現在應該能夠重新啟動 MLServer 實例（即使用 <code>mlserver start .</code> 命令），以傳送一些測試請求。</p> <div class=highlight><pre><span></span><code><a id=__codelineno-11-1 name=__codelineno-11-1 href=#__codelineno-11-1></a><span class=kn>import</span> <span class=nn>requests</span>
+<a id=__codelineno-11-2 name=__codelineno-11-2 href=#__codelineno-11-2></a>
+<a id=__codelineno-11-3 name=__codelineno-11-3 href=#__codelineno-11-3></a><span class=n>payload</span> <span class=o>=</span> <span class=p>{</span>
+<a id=__codelineno-11-4 name=__codelineno-11-4 href=#__codelineno-11-4></a>    <span class=s2>"inputs"</span><span class=p>:</span> <span class=p>[</span>
+<a id=__codelineno-11-5 name=__codelineno-11-5 href=#__codelineno-11-5></a>        <span class=p>{</span>
+<a id=__codelineno-11-6 name=__codelineno-11-6 href=#__codelineno-11-6></a>            <span class=s2>"name"</span><span class=p>:</span> <span class=s2>"parameters-np"</span><span class=p>,</span>
+<a id=__codelineno-11-7 name=__codelineno-11-7 href=#__codelineno-11-7></a>            <span class=s2>"datatype"</span><span class=p>:</span> <span class=s2>"INT32"</span><span class=p>,</span>
+<a id=__codelineno-11-8 name=__codelineno-11-8 href=#__codelineno-11-8></a>            <span class=s2>"shape"</span><span class=p>:</span> <span class=p>[</span><span class=mi>2</span><span class=p>,</span> <span class=mi>2</span><span class=p>],</span>
+<a id=__codelineno-11-9 name=__codelineno-11-9 href=#__codelineno-11-9></a>            <span class=s2>"data"</span><span class=p>:</span> <span class=p>[</span><span class=mi>1</span><span class=p>,</span> <span class=mi>2</span><span class=p>,</span> <span class=mi>3</span><span class=p>,</span> <span class=mi>4</span><span class=p>],</span>
+<a id=__codelineno-11-10 name=__codelineno-11-10 href=#__codelineno-11-10></a>            <span class=s2>"parameters"</span><span class=p>:</span> <span class=p>{</span>
+<a id=__codelineno-11-11 name=__codelineno-11-11 href=#__codelineno-11-11></a>                <span class=s2>"content_type"</span><span class=p>:</span> <span class=s2>"np"</span>
+<a id=__codelineno-11-12 name=__codelineno-11-12 href=#__codelineno-11-12></a>            <span class=p>}</span>
+<a id=__codelineno-11-13 name=__codelineno-11-13 href=#__codelineno-11-13></a>        <span class=p>},</span>
+<a id=__codelineno-11-14 name=__codelineno-11-14 href=#__codelineno-11-14></a>        <span class=p>{</span>
+<a id=__codelineno-11-15 name=__codelineno-11-15 href=#__codelineno-11-15></a>            <span class=s2>"name"</span><span class=p>:</span> <span class=s2>"parameters-str"</span><span class=p>,</span>
+<a id=__codelineno-11-16 name=__codelineno-11-16 href=#__codelineno-11-16></a>            <span class=s2>"datatype"</span><span class=p>:</span> <span class=s2>"BYTES"</span><span class=p>,</span>
+<a id=__codelineno-11-17 name=__codelineno-11-17 href=#__codelineno-11-17></a>            <span class=s2>"shape"</span><span class=p>:</span> <span class=p>[</span><span class=mi>2</span><span class=p>,</span> <span class=mi>11</span><span class=p>],</span>
+<a id=__codelineno-11-18 name=__codelineno-11-18 href=#__codelineno-11-18></a>            <span class=s2>"data"</span><span class=p>:</span> <span class=p>[</span><span class=s2>"hello world 😁"</span><span class=p>,</span> <span class=s2>"bye bye 😁"</span><span class=p>],</span>
+<a id=__codelineno-11-19 name=__codelineno-11-19 href=#__codelineno-11-19></a>            <span class=s2>"parameters"</span><span class=p>:</span> <span class=p>{</span>
+<a id=__codelineno-11-20 name=__codelineno-11-20 href=#__codelineno-11-20></a>                <span class=s2>"content_type"</span><span class=p>:</span> <span class=s2>"str"</span>
+<a id=__codelineno-11-21 name=__codelineno-11-21 href=#__codelineno-11-21></a>            <span class=p>}</span>
+<a id=__codelineno-11-22 name=__codelineno-11-22 href=#__codelineno-11-22></a>        <span class=p>}</span>
+<a id=__codelineno-11-23 name=__codelineno-11-23 href=#__codelineno-11-23></a>    <span class=p>],</span>
+<a id=__codelineno-11-24 name=__codelineno-11-24 href=#__codelineno-11-24></a>    <span class=s2>"parameters"</span><span class=p>:</span> <span class=p>{</span>
+<a id=__codelineno-11-25 name=__codelineno-11-25 href=#__codelineno-11-25></a>        <span class=s2>"content_type"</span><span class=p>:</span> <span class=s2>"pd"</span>
+<a id=__codelineno-11-26 name=__codelineno-11-26 href=#__codelineno-11-26></a>    <span class=p>}</span>
+<a id=__codelineno-11-27 name=__codelineno-11-27 href=#__codelineno-11-27></a><span class=p>}</span>
+<a id=__codelineno-11-28 name=__codelineno-11-28 href=#__codelineno-11-28></a>
+<a id=__codelineno-11-29 name=__codelineno-11-29 href=#__codelineno-11-29></a><span class=n>response</span> <span class=o>=</span> <span class=n>requests</span><span class=o>.</span><span class=n>post</span><span class=p>(</span>
+<a id=__codelineno-11-30 name=__codelineno-11-30 href=#__codelineno-11-30></a>    <span class=s2>"http://localhost:8080/v2/models/content-type-example/infer"</span><span class=p>,</span>
+<a id=__codelineno-11-31 name=__codelineno-11-31 href=#__codelineno-11-31></a>    <span class=n>json</span><span class=o>=</span><span class=n>payload</span>
+<a id=__codelineno-11-32 name=__codelineno-11-32 href=#__codelineno-11-32></a><span class=p>)</span>
 </code></pre></div></div> </article> </div> </div> <button type=button class="md-top md-icon" data-md-component=top hidden> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg> Back to top </button> </main> <footer class=md-footer> <div class="md-footer-meta md-typeset"> <div class="md-footer-meta__inner md-grid"> <div class=md-copyright> Made with <a href=https://squidfunk.github.io/mkdocs-material/ target=_blank rel=noopener> Material for MkDocs </a> </div> </div> </div> </footer> </div> <div class=md-dialog data-md-component=dialog> <div class="md-dialog__inner md-typeset"></div> </div> <script id=__config type=application/json>{"base": "../../..", "features": ["content.code.annotate", "content.tooltips", "navigation.indexes", "navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "search.highlight", "search.share", "search.suggest", "toc.follow"], "search": "../../../assets/javascripts/workers/search.a264c092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script> <script src=../../../assets/javascripts/bundle.726fbb30.min.js></script> <script src=../../../javascripts/katex.js></script> <script src=https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.js></script> <script src=https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/contrib/auto-render.min.js></script> <script>document$.subscribe(() => {const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});})</script></body> </html>
